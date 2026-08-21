@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+
+  /* Primary */
+  --color-black: #111111;
+  --color-black-soft: #1c1c1c;
+
+  /* Accent */
+  --color-orange: #f26a21;
+  --color-orange-dark: #d95516;
+  --color-orange-light: #fff1e8;
+
+  /* Background */
+  --color-background: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f2f2ef;
+
+  /* Text */
+  --color-text-primary: #111111;
+  --color-text-secondary: #5f5f5b;
+  --color-text-muted: #858580;
+  --color-text-disabled: #a5a5a0;
+
+  /* Borders */
+  --color-border: #ddddd8;
+  --color-border-light: #ebebe7;
+
+  /* Semantic */
+  --color-success: #247a45;
+  --color-success-light: #eaf5ee;
+
+  --color-warning: #a86400;
+  --color-warning-light: #fff3dc;
+
+  --color-danger: #b42318;
+  --color-danger-light: #fdecea;
+
+  --color-info: #245b8a;
+  --color-info-light: #eaf2f8;
+
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  /* Tabular figures for money/quantity columns */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
