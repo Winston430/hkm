@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { DotsThreeVertical, Package, Plus } from "@phosphor-icons/react";
+import { DotsThreeVertical, DownloadSimple, Package, Plus } from "@phosphor-icons/react";
 import { Modal } from "../../components/ui/Modal";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -25,7 +25,9 @@ import {
   type ProductInput,
 } from "../../services/products";
 import { formatCurrency } from "../../lib/format";
+import { exportToCsv } from "../../lib/exportCsv";
 import { getStockStatus, type Category, type Product } from "../../types/product";
+import { toast } from "../../lib/toast";
 import { ProductFormModal } from "./ProductFormModal";
 
 type Status = "loading" | "success" | "error";
@@ -105,18 +107,31 @@ export function Products() {
   }
 
   async function handleCreate(input: ProductInput) {
-    await createProduct(input);
-    await load();
+    const created = await createProduct(input);
+    setProducts((prev) =>
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    toast.success("Product saved successfully.");
   }
 
   async function handleUpdate(id: string, input: Omit<ProductInput, "stock">) {
-    await updateProduct(id, input);
-    await load();
+    const { updatedAt } = await updateProduct(id, input);
+    setProducts((prev) =>
+      prev
+        .map((p) => (p.id === id ? { ...p, ...input, updatedAt } : p))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    toast.success("Product saved successfully.");
   }
 
   async function handleToggleActive(product: Product) {
-    await setProductActive(product.id, !product.active);
-    await load();
+    const { updatedAt } = await setProductActive(product.id, !product.active);
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === product.id ? { ...p, active: !product.active, updatedAt } : p,
+      ),
+    );
+    toast.success(product.active ? "Product deactivated." : "Product activated.");
   }
 
   async function handleDelete() {
@@ -124,11 +139,30 @@ export function Products() {
     setDeleteSubmitting(true);
     try {
       await deleteProduct(deleting.id);
+      setProducts((prev) => prev.filter((p) => p.id !== deleting.id));
       setDeleting(null);
-      await load();
+      toast.success("Product deleted successfully.");
+    } catch {
+      toast.error("Unable to delete product.");
     } finally {
       setDeleteSubmitting(false);
     }
+  }
+
+  function handleExport() {
+    exportToCsv(
+      "products",
+      filtered.map((product) => ({
+        Name: product.name,
+        SKU: product.sku,
+        Category: categoryName(product.categoryId),
+        "Cost Price": product.costPrice,
+        "Selling Price": product.sellingPrice,
+        Stock: product.stock,
+        "Minimum Stock": product.minimumStock,
+        Status: product.active ? "Active" : "Inactive",
+      })),
+    );
   }
 
   return (
@@ -137,9 +171,19 @@ export function Products() {
         title="Products"
         description="Manage your catalog, pricing, and stock thresholds"
         action={
-          <Button icon={<Plus size={15} />} onClick={openCreate}>
-            Add Product
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              icon={<DownloadSimple size={15} />}
+              onClick={handleExport}
+              disabled={filtered.length === 0}
+            >
+              Export CSV
+            </Button>
+            <Button icon={<Plus size={15} />} onClick={openCreate}>
+              Add Product
+            </Button>
+          </>
         }
       />
 

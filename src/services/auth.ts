@@ -11,6 +11,7 @@ import {
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import { clearSession, startSession } from "../lib/session";
 import type { AppUser } from "../types/user";
 
 export function subscribeToAuthChanges(
@@ -22,11 +23,13 @@ export function subscribeToAuthChanges(
 export async function login(email: string, password: string) {
   await setPersistence(auth, browserLocalPersistence);
   const credential = await signInWithEmailAndPassword(auth, email, password);
+  startSession();
   return credential.user;
 }
 
 export async function logout() {
   await signOut(auth);
+  clearSession();
 }
 
 export async function changePassword(

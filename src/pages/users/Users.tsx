@@ -17,6 +17,7 @@ import {
   updateUserStatus,
 } from "../../services/users";
 import type { AppUser, UserRole } from "../../types/user";
+import { toast } from "../../lib/toast";
 import { UserFormModal } from "./UserFormModal";
 
 type Status = "loading" | "success" | "error";
@@ -56,18 +57,28 @@ export function Users() {
     password: string;
     role: UserRole;
   }) {
-    await createUser(input);
-    await load();
+    const created = await createUser(input);
+    setUsers((prev) =>
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    toast.success("User created successfully.");
   }
 
   async function handleRoleChange(user: AppUser, role: UserRole) {
-    await updateUserRole(user.id, role);
-    await load();
+    const { updatedAt } = await updateUserRole(user.id, role);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, role, updatedAt } : u)),
+    );
+    toast.success(`${user.name} is now ${role === "admin" ? "an admin" : "an agent"}.`);
   }
 
   async function handleStatusChange(user: AppUser, active: boolean) {
-    await updateUserStatus(user.id, active ? "active" : "inactive");
-    await load();
+    const status = active ? "active" : "inactive";
+    const { updatedAt } = await updateUserStatus(user.id, status);
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, status, updatedAt } : u)),
+    );
+    toast.success(`${user.name} ${active ? "activated" : "deactivated"}.`);
   }
 
   return (

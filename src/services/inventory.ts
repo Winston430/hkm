@@ -28,9 +28,12 @@ export async function adjustStock(params: {
   reason: StockMovementReason;
   userId: string;
   userName: string;
-}) {
+}): Promise<StockMovement> {
   const { productId, productName, change, reason, userId, userName } = params;
   const productRef = doc(db, "products", productId);
+  const movementRef = doc(collection(db, "stock_movements"));
+  const createdAt = Date.now();
+  let movement!: StockMovement;
 
   await runTransaction(db, async (transaction) => {
     const snapshot = await transaction.get(productRef);
@@ -41,11 +44,10 @@ export async function adjustStock(params: {
 
     transaction.update(productRef, {
       stock: newQuantity,
-      updatedAt: Date.now(),
+      updatedAt: createdAt,
     });
 
-    const movementRef = doc(collection(db, "stock_movements"));
-    transaction.set(movementRef, {
+    const movementData = {
       productId,
       productName,
       previousQuantity,
@@ -54,7 +56,11 @@ export async function adjustStock(params: {
       reason,
       userId,
       userName,
-      createdAt: Date.now(),
-    });
+      createdAt,
+    };
+    transaction.set(movementRef, movementData);
+    movement = { id: movementRef.id, ...movementData };
   });
+
+  return movement;
 }

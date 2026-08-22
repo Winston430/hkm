@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { getBusinessProfile, saveBusinessProfile } from "../../services/settings";
+import { toast } from "../../lib/toast";
 
 type Status = "loading" | "success" | "error";
 
@@ -15,7 +16,6 @@ export function BusinessProfileForm() {
   const [address, setAddress] = useState("");
   const [currency, setCurrency] = useState("TZS");
   const [submitting, setSubmitting] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   async function load() {
     setStatus("loading");
@@ -40,10 +40,11 @@ export function BusinessProfileForm() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setSubmitting(true);
-    setSaved(false);
     try {
       await saveBusinessProfile({ name, phone, address, currency });
-      setSaved(true);
+      toast.success("Business profile saved successfully.");
+    } catch {
+      toast.error("Unable to save business profile.");
     } finally {
       setSubmitting(false);
     }
@@ -94,12 +95,6 @@ export function BusinessProfileForm() {
               maxLength={3}
             />
           </div>
-
-          {saved && (
-            <p className="rounded-md bg-success-light px-3 py-2 text-[12px] text-success">
-              Business profile saved successfully.
-            </p>
-          )}
 
           <div>
             <Button type="submit" size="sm" disabled={submitting}>

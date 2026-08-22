@@ -34,7 +34,7 @@ export async function createUser(input: {
   email: string;
   password: string;
   role: UserRole;
-}) {
+}): Promise<AppUser> {
   const secondaryApp = initializeApp(app.options, `secondary-${Date.now()}`);
   const secondaryAuth = getAuth(secondaryApp);
 
@@ -46,7 +46,7 @@ export async function createUser(input: {
     );
 
     const now = Date.now();
-    await setDoc(doc(db, "users", credential.user.uid), {
+    const profile: Omit<AppUser, "id"> = {
       name: input.name,
       email: input.email,
       role: input.role,
@@ -54,18 +54,24 @@ export async function createUser(input: {
       lastActivityAt: null,
       createdAt: now,
       updatedAt: now,
-    });
-
+    };
+    await setDoc(doc(db, "users", credential.user.uid), profile);
     await signOut(secondaryAuth);
+
+    return { id: credential.user.uid, ...profile };
   } finally {
     await deleteApp(secondaryApp);
   }
 }
 
-export async function updateUserRole(id: string, role: UserRole) {
-  await updateDoc(doc(db, "users", id), { role, updatedAt: Date.now() });
+export async function updateUserRole(id: string, role: UserRole): Promise<{ updatedAt: number }> {
+  const updatedAt = Date.now();
+  await updateDoc(doc(db, "users", id), { role, updatedAt });
+  return { updatedAt };
 }
 
-export async function updateUserStatus(id: string, status: UserStatus) {
-  await updateDoc(doc(db, "users", id), { status, updatedAt: Date.now() });
+export async function updateUserStatus(id: string, status: UserStatus): Promise<{ updatedAt: number }> {
+  const updatedAt = Date.now();
+  await updateDoc(doc(db, "users", id), { status, updatedAt });
+  return { updatedAt };
 }

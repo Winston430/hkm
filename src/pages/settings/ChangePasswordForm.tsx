@@ -4,6 +4,7 @@ import { Card, CardHeader } from "../../components/ui/Card";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { changePassword } from "../../services/auth";
+import { toast } from "../../lib/toast";
 
 function changePasswordErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {
@@ -26,12 +27,10 @@ export function ChangePasswordForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setSuccess(false);
 
     if (newPassword.length < 6) {
       setError("New password must be at least 6 characters.");
@@ -45,7 +44,7 @@ export function ChangePasswordForm() {
     setSubmitting(true);
     try {
       await changePassword(currentPassword, newPassword);
-      setSuccess(true);
+      toast.success("Password updated successfully.");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -87,11 +86,6 @@ export function ChangePasswordForm() {
         {error && (
           <p className="rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger">
             {error}
-          </p>
-        )}
-        {success && (
-          <p className="rounded-md bg-success-light px-3 py-2 text-[12px] text-success">
-            Password updated successfully.
           </p>
         )}
 

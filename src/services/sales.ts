@@ -75,7 +75,11 @@ export async function createSale(params: {
   paymentMethod: PaymentMethod;
   agentId: string;
   agentName: string;
-}): Promise<{ id: string; invoiceNumber: string }> {
+}): Promise<{
+  id: string;
+  invoiceNumber: string;
+  updatedStock: { productId: string; newQuantity: number }[];
+}> {
   if (params.items.length === 0) {
     throw new Error("A sale needs at least one item");
   }
@@ -86,6 +90,7 @@ export async function createSale(params: {
     doc(db, "products", item.productId),
   );
   const movementRefs = params.items.map(() => doc(collection(db, "stock_movements")));
+  const updatedStock: { productId: string; newQuantity: number }[] = [];
 
   await runTransaction(db, async (transaction) => {
     const snapshots = await Promise.all(
@@ -94,6 +99,7 @@ export async function createSale(params: {
 
     const saleItems: SaleItem[] = [];
     let totalAmount = 0;
+    updatedStock.length = 0;
 
     snapshots.forEach((snapshot, index) => {
       const item = params.items[index];
@@ -106,6 +112,7 @@ export async function createSale(params: {
         throw new Error(`Not enough stock for ${item.productName}`);
       }
       const newQuantity = previousQuantity - item.quantity;
+      updatedStock.push({ productId: item.productId, newQuantity });
 
       transaction.update(productRefs[index], {
         stock: newQuantity,
@@ -147,7 +154,7 @@ export async function createSale(params: {
     });
   });
 
-  return { id: saleRef.id, invoiceNumber };
+  return { id: saleRef.id, invoiceNumber, updatedStock };
 }
 
 /** Marks a completed sale as refunded and returns its items to stock. */

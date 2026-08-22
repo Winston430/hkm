@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Receipt } from "@phosphor-icons/react";
+import { DownloadSimple, Receipt } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
 import { SearchInput } from "../../components/ui/SearchInput";
 import { Select } from "../../components/ui/Select";
 import { Input } from "../../components/ui/Input";
@@ -14,7 +15,9 @@ import { Table, TableHead, Th, Td, Tr } from "../../components/ui/Table";
 import { useAuth } from "../../hooks/useAuth";
 import { listAllSales, refundSale } from "../../services/sales";
 import { formatCurrency, formatDayLabel, formatTime } from "../../lib/format";
+import { exportToCsv } from "../../lib/exportCsv";
 import type { PaymentMethod, Sale, SaleStatus } from "../../types/sale";
+import { toast } from "../../lib/toast";
 import { SaleDetailModal } from "./SaleDetailModal";
 
 type Status = "loading" | "success" | "error";
@@ -90,12 +93,44 @@ export function Sales() {
   async function handleRefund(sale: Sale) {
     if (!profile) return;
     await refundSale(sale, profile.id, profile.name);
-    await load();
+    setSales((prev) =>
+      prev.map((s) => (s.id === sale.id ? { ...s, status: "refunded" } : s)),
+    );
+    toast.success("Sale refunded successfully.");
+  }
+
+  function handleExport() {
+    exportToCsv(
+      "sales",
+      filtered.map((sale) => ({
+        Invoice: sale.invoiceNumber,
+        Date: formatDayLabel(sale.createdAt),
+        Time: formatTime(sale.createdAt),
+        Agent: sale.agentName,
+        Items: sale.items.length,
+        Amount: sale.totalAmount,
+        Payment: paymentLabel[sale.paymentMethod],
+        Status: sale.status,
+      })),
+    );
   }
 
   return (
     <div>
-      <PageHeader title="Sales" description="Review completed transactions" />
+      <PageHeader
+        title="Sales"
+        description="Review completed transactions"
+        action={
+          <Button
+            variant="secondary"
+            icon={<DownloadSimple size={15} />}
+            onClick={handleExport}
+            disabled={filtered.length === 0}
+          >
+            Export CSV
+          </Button>
+        }
+      />
 
       <Card padded={false} className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-3">

@@ -31,31 +31,31 @@ export type ProductInput = Omit<
   "id" | "createdAt" | "updatedAt" | "stock"
 > & { stock?: number };
 
-export async function createProduct(input: ProductInput) {
+export async function createProduct(input: ProductInput): Promise<Product> {
   const now = Date.now();
-  await addDoc(productsRef, {
+  const stock = input.stock ?? 0;
+  const ref = await addDoc(productsRef, {
     ...input,
-    stock: input.stock ?? 0,
+    stock,
     createdAt: now,
     updatedAt: now,
   });
+  return { id: ref.id, ...input, stock, createdAt: now, updatedAt: now };
 }
 
 export async function updateProduct(
   id: string,
   input: Omit<ProductInput, "stock">,
-) {
-  await updateDoc(doc(db, "products", id), {
-    ...input,
-    updatedAt: Date.now(),
-  });
+): Promise<{ updatedAt: number }> {
+  const updatedAt = Date.now();
+  await updateDoc(doc(db, "products", id), { ...input, updatedAt });
+  return { updatedAt };
 }
 
-export async function setProductActive(id: string, active: boolean) {
-  await updateDoc(doc(db, "products", id), {
-    active,
-    updatedAt: Date.now(),
-  });
+export async function setProductActive(id: string, active: boolean): Promise<{ updatedAt: number }> {
+  const updatedAt = Date.now();
+  await updateDoc(doc(db, "products", id), { active, updatedAt });
+  return { updatedAt };
 }
 
 export async function deleteProduct(id: string) {

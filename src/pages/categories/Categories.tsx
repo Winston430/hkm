@@ -17,6 +17,7 @@ import {
   updateCategory,
 } from "../../services/categories";
 import type { Category } from "../../types/product";
+import { toast } from "../../lib/toast";
 import { CategoryFormModal } from "./CategoryFormModal";
 
 type Status = "loading" | "success" | "error";
@@ -64,11 +65,20 @@ export function Categories() {
 
   async function handleSubmit(name: string) {
     if (editing) {
-      await updateCategory(editing.id, name);
+      const { updatedAt } = await updateCategory(editing.id, name);
+      setCategories((prev) =>
+        prev
+          .map((c) => (c.id === editing.id ? { ...c, name, updatedAt } : c))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      toast.success("Category updated successfully.");
     } else {
-      await createCategory(name);
+      const created = await createCategory(name);
+      setCategories((prev) =>
+        [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      toast.success("Category created successfully.");
     }
-    await load();
   }
 
   async function handleDelete() {
@@ -84,8 +94,9 @@ export function Categories() {
         return;
       }
       await deleteCategory(deleting.id);
+      setCategories((prev) => prev.filter((c) => c.id !== deleting.id));
       setDeleting(null);
-      await load();
+      toast.success("Category deleted successfully.");
     } catch {
       setDeleteError("Unable to delete category. Please try again.");
     } finally {

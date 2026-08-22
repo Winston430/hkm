@@ -15,6 +15,7 @@ import { adjustStock, listStockMovements } from "../../services/inventory";
 import { listAllProducts } from "../../services/products";
 import { getStockStatus, type Product, type StockStatus } from "../../types/product";
 import type { StockMovement, StockMovementReason } from "../../types/sale";
+import { toast } from "../../lib/toast";
 import { AdjustStockModal } from "./AdjustStockModal";
 
 type PageStatus = "loading" | "success" | "error";
@@ -80,7 +81,7 @@ export function Inventory() {
     reason: StockMovementReason;
   }) {
     if (!adjusting || !profile) return;
-    await adjustStock({
+    const movement = await adjustStock({
       productId: adjusting.id,
       productName: adjusting.name,
       change: params.change,
@@ -88,7 +89,15 @@ export function Inventory() {
       userId: profile.id,
       userName: profile.name,
     });
-    await load();
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === adjusting.id
+          ? { ...p, stock: movement.newQuantity, updatedAt: movement.createdAt }
+          : p,
+      ),
+    );
+    setMovements((prev) => [movement, ...prev]);
+    toast.success("Stock updated successfully.");
   }
 
   return (

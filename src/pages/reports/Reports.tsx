@@ -1,14 +1,22 @@
 import { useMemo, useState } from "react";
+import { DownloadSimple } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Select";
+import { Button } from "../../components/ui/Button";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useReportsData } from "../../hooks/useReportsData";
+import { exportToCsv } from "../../lib/exportCsv";
+import { formatDayLabel, formatTime } from "../../lib/format";
 import { SalesReportCard } from "./SalesReportCard";
 import { InventoryReportCard } from "./InventoryReportCard";
 import { ProductPerformanceCard } from "./ProductPerformanceCard";
 import { AgentPerformanceCard } from "./AgentPerformanceCard";
+import { RevenueTrendCard } from "./RevenueTrendCard";
+import { InsightsCard } from "./InsightsCard";
+import { generateInsights } from "./insights";
+import { buildRevenueSeries } from "./series";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,12 +31,51 @@ export function Reports() {
   const { status, sales, products } = useReportsData();
   const [range, setRange] = useState("30");
 
+  const windowDays = range === "all" ? null : Number(range);
+
   const scopedSales = useMemo(() => {
-    if (range === "all") return sales;
-    const days = Number(range);
-    const cutoff = Date.now() - days * DAY_MS;
+    if (windowDays === null) return sales;
+    const cutoff = Date.now() - windowDays * DAY_MS;
     return sales.filter((s) => s.createdAt >= cutoff);
-  }, [sales, range]);
+  }, [sales, windowDays]);
+
+  const previousPeriodSales = useMemo(() => {
+    if (windowDays === null) return null;
+    const cutoff = Date.now() - windowDays * DAY_MS;
+    const previousCutoff = cutoff - windowDays * DAY_MS;
+    return sales.filter((s) => s.createdAt >= previousCutoff && s.createdAt < cutoff);
+  }, [sales, windowDays]);
+
+  const revenueSeries = useMemo(
+    () => buildRevenueSeries(scopedSales, windowDays),
+    [scopedSales, windowDays],
+  );
+
+  const insights = useMemo(
+    () =>
+      generateInsights({
+        currentSales: scopedSales,
+        previousSales: previousPeriodSales,
+        products,
+      }),
+    [scopedSales, previousPeriodSales, products],
+  );
+
+  function handleExport() {
+    exportToCsv(
+      `sales-report-${rangeOptions.find((o) => o.value === range)?.label.toLowerCase().replace(/\s+/g, "-")}`,
+      scopedSales.map((sale) => ({
+        Invoice: sale.invoiceNumber,
+        Date: formatDayLabel(sale.createdAt),
+        Time: formatTime(sale.createdAt),
+        Agent: sale.agentName,
+        Items: sale.items.length,
+        Amount: sale.totalAmount,
+        Payment: sale.paymentMethod,
+        Status: sale.status,
+      })),
+    );
+  }
 
   return (
     <div>
@@ -36,15 +83,25 @@ export function Reports() {
         title="Reports"
         description="Business performance based on your recorded data"
         action={
-          <div className="w-full max-w-[170px]">
-            <Select value={range} onChange={(e) => setRange(e.target.value)}>
-              {rangeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <>
+            <div className="w-full max-w-[170px]">
+              <Select value={range} onChange={(e) => setRange(e.target.value)}>
+                {rangeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <Button
+              variant="secondary"
+              icon={<DownloadSimple size={15} />}
+              onClick={handleExport}
+              disabled={scopedSales.length === 0}
+            >
+              Export CSV
+            </Button>
+          </>
         }
       />
 
@@ -68,6 +125,8 @@ export function Reports() {
       {status === "success" && (
         <div className="flex flex-col gap-6">
           <SalesReportCard sales={scopedSales} />
+          <RevenueTrendCard series={revenueSeries} />
+          <InsightsCard insights={insights} />
           <InventoryReportCard products={products} />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ProductPerformanceCard sales={scopedSales} />

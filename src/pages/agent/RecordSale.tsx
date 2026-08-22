@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, ShoppingCart, Trash, X } from "@phosphor-icons/react";
+import { Plus, ShoppingCart, Trash } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -13,6 +13,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { listActiveProducts } from "../../services/products";
 import { createSale } from "../../services/sales";
 import { formatCurrency } from "../../lib/format";
+import { toast } from "../../lib/toast";
 import { getStockStatus, type Product } from "../../types/product";
 import type { PaymentMethod } from "../../types/sale";
 import { MySalesHistory } from "./MySalesHistory";
@@ -35,8 +36,6 @@ export function RecordSale() {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [lastInvoice, setLastInvoice] = useState<string | null>(null);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   async function loadProducts() {
@@ -118,7 +117,6 @@ export function RecordSale() {
   async function handleCompleteSale() {
     if (!profile || cart.length === 0) return;
     setSubmitting(true);
-    setSubmitError(null);
     try {
       const result = await createSale({
         items: cart.map((line) => ({
@@ -131,13 +129,22 @@ export function RecordSale() {
         agentId: profile.id,
         agentName: profile.name,
       });
-      setLastInvoice(result.invoiceNumber);
+      const stockByProduct = new Map(
+        result.updatedStock.map((s) => [s.productId, s.newQuantity]),
+      );
+      setProducts((prev) =>
+        prev.map((p) =>
+          stockByProduct.has(p.id)
+            ? { ...p, stock: stockByProduct.get(p.id)! }
+            : p,
+        ),
+      );
       setCart([]);
       setPaymentMethod("cash");
-      await loadProducts();
       setHistoryRefreshKey((key) => key + 1);
+      toast.success(`Sale completed successfully — ${result.invoiceNumber}`);
     } catch {
-      setSubmitError(
+      toast.error(
         "Unable to complete sale. Stock may have changed — refresh and try again.",
       );
     } finally {
@@ -148,20 +155,6 @@ export function RecordSale() {
   return (
     <div>
       <PageHeader title="New Sale" description="Search products and record a sale" />
-
-      {lastInvoice && (
-        <div className="mb-4 flex items-center justify-between rounded-md bg-success-light px-4 py-3 text-[13px] text-success">
-          <span>Sale completed successfully — {lastInvoice}</span>
-          <button
-            type="button"
-            onClick={() => setLastInvoice(null)}
-            aria-label="Dismiss"
-            className="text-success hover:opacity-70"
-          >
-            <X size={15} />
-          </button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
         <div>
@@ -315,12 +308,6 @@ export function RecordSale() {
                   {formatCurrency(total)}
                 </span>
               </div>
-
-              {submitError && (
-                <p className="rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger">
-                  {submitError}
-                </p>
-              )}
 
               <Button
                 className="w-full"
