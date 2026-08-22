@@ -39,7 +39,7 @@ export function UserFormModal({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("salesperson");
+  const [role, setRole] = useState<UserRole>("agent");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export function UserFormModal({
       setName("");
       setEmail("");
       setPassword("");
-      setRole("salesperson");
+      setRole("agent");
       setError(null);
     }
   }, [open]);
@@ -116,7 +116,7 @@ export function UserFormModal({
           value={role}
           onChange={(e) => setRole(e.target.value as UserRole)}
         >
-          <option value="salesperson">Salesperson</option>
+          <option value="agent">Agent</option>
           <option value="admin">Admin</option>
         </Select>
 

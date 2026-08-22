@@ -31,17 +31,25 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if isActive();
-      allow write: if isAdmin();
+      allow create, delete: if isAdmin();
+      // Admins can change anything. Non-admin active users (agents) may only
+      // touch stock as a side effect of completing a sale — never price,
+      // name, category, or active state.
+      allow update: if isAdmin() ||
+        (isActive() &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt']));
     }
 
     match /sales/{saleId} {
-      allow read: if isActive();
-      allow create: if isActive();
+      // Admins review every sale; agents can only see their own.
+      allow read: if isAdmin() ||
+        (isActive() && resource.data.agentId == request.auth.uid);
+      allow create: if isActive() && request.resource.data.agentId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
 
     match /stock_movements/{movementId} {
-      allow read: if isActive();
+      allow read: if isAdmin();
       allow create: if isActive();
       allow update, delete: if isAdmin();
     }

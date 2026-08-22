@@ -32,7 +32,7 @@ export function RecentSalesCard({ sales }: { sales: Sale[] }) {
         <Table>
           <TableHead>
             <Th>Invoice</Th>
-            <Th>Salesperson</Th>
+            <Th>Agent</Th>
             <Th>Amount</Th>
             <Th>Payment</Th>
             <Th>Status</Th>
@@ -42,7 +42,7 @@ export function RecentSalesCard({ sales }: { sales: Sale[] }) {
               <Tr key={sale.id}>
                 <Td className="font-medium">{sale.invoiceNumber}</Td>
                 <Td className="text-text-secondary">
-                  {sale.salespersonName}
+                  {sale.agentName}
                 </Td>
                 <Td className="font-medium tabular-nums">
                   {formatCurrency(sale.totalAmount)}

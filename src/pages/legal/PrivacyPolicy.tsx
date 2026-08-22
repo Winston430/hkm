@@ -50,7 +50,7 @@ export function PrivacyPolicy() {
         <p>
           Data is stored in the business's Firebase project and protected by
           authentication and role-based access rules. Only active
-          administrator and salesperson accounts can access the system, and
+          administrator and agent accounts can access the system, and
           write access to sensitive records is restricted to administrators.
         </p>
       </section>

@@ -17,8 +17,8 @@ export interface Sale {
   totalAmount: number;
   paymentMethod: PaymentMethod;
   status: SaleStatus;
-  salespersonId: string;
-  salespersonName: string;
+  agentId: string;
+  agentName: string;
   createdAt: number;
 }
 

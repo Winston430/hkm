@@ -8,7 +8,7 @@ import { useReportsData } from "../../hooks/useReportsData";
 import { SalesReportCard } from "./SalesReportCard";
 import { InventoryReportCard } from "./InventoryReportCard";
 import { ProductPerformanceCard } from "./ProductPerformanceCard";
-import { SalespersonPerformanceCard } from "./SalespersonPerformanceCard";
+import { AgentPerformanceCard } from "./AgentPerformanceCard";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -71,7 +71,7 @@ export function Reports() {
           <InventoryReportCard products={products} />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <ProductPerformanceCard sales={scopedSales} />
-            <SalespersonPerformanceCard sales={scopedSales} />
+            <AgentPerformanceCard sales={scopedSales} />
           </div>
         </div>
       )}

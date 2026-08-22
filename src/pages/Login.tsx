@@ -25,14 +25,15 @@ function loginErrorMessage(error: unknown): string {
 }
 
 export function Login() {
-  const { status } = useAuth();
+  const { status, profile } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (status === "authenticated") {
-    return <Navigate to="/admin/dashboard" replace />;
+    const destination = profile?.role === "agent" ? "/agent" : "/admin/dashboard";
+    return <Navigate to={destination} replace />;
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -58,7 +59,7 @@ export function Login() {
             Stationery Manager
           </p>
           <p className="mt-1 text-[13px] text-text-secondary">
-            Sign in to your admin account
+            Sign in to continue
           </p>
         </div>
 
