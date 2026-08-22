@@ -27,3 +27,6 @@ firebase-adminsdk*.json
 *.njsproj
 *.sln
 *.sw?
+.env
+.env.localWinston430
+Winston430.pub
