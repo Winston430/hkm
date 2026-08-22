@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Receipt, ShoppingCart, Trash, X } from "@phosphor-icons/react";
+import { Plus, ShoppingCart, Trash, X } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -11,10 +11,11 @@ import { ErrorState } from "../../components/ui/ErrorState";
 import { SkeletonRow } from "../../components/ui/Skeleton";
 import { useAuth } from "../../hooks/useAuth";
 import { listActiveProducts } from "../../services/products";
-import { createSale, listSalesByAgent } from "../../services/sales";
-import { formatCurrency, formatTime } from "../../lib/format";
+import { createSale } from "../../services/sales";
+import { formatCurrency } from "../../lib/format";
 import { getStockStatus, type Product } from "../../types/product";
-import type { PaymentMethod, Sale } from "../../types/sale";
+import type { PaymentMethod } from "../../types/sale";
+import { MySalesHistory } from "./MySalesHistory";
 
 type PageStatus = "loading" | "success" | "error";
 
@@ -26,12 +27,6 @@ interface CartLine {
   maxStock: number;
 }
 
-const paymentLabel: Record<PaymentMethod, string> = {
-  cash: "Cash",
-  card: "Card",
-  "mobile-money": "Mobile Money",
-};
-
 export function RecordSale() {
   const { profile } = useAuth();
   const [status, setStatus] = useState<PageStatus>("loading");
@@ -42,8 +37,7 @@ export function RecordSale() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastInvoice, setLastInvoice] = useState<string | null>(null);
-  const [recentSales, setRecentSales] = useState<Sale[]>([]);
-  const [recentSalesStatus, setRecentSalesStatus] = useState<PageStatus>("loading");
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
   async function loadProducts() {
     setStatus("loading");
@@ -56,22 +50,9 @@ export function RecordSale() {
     }
   }
 
-  async function loadRecentSales() {
-    if (!profile) return;
-    setRecentSalesStatus("loading");
-    try {
-      const data = await listSalesByAgent(profile.id, 8);
-      setRecentSales(data);
-      setRecentSalesStatus("success");
-    } catch {
-      setRecentSalesStatus("error");
-    }
-  }
-
   useEffect(() => {
     loadProducts();
-    loadRecentSales();
-  }, [profile?.id]);
+  }, []);
 
   const results = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -153,7 +134,8 @@ export function RecordSale() {
       setLastInvoice(result.invoiceNumber);
       setCart([]);
       setPaymentMethod("cash");
-      await Promise.all([loadProducts(), loadRecentSales()]);
+      await loadProducts();
+      setHistoryRefreshKey((key) => key + 1);
     } catch {
       setSubmitError(
         "Unable to complete sale. Stock may have changed — refresh and try again.",
@@ -182,7 +164,7 @@ export function RecordSale() {
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
-        <div className="flex flex-col gap-6">
+        <div>
           <Card>
             <CardHeader title="Search Products" />
             <SearchInput
@@ -248,48 +230,6 @@ export function RecordSale() {
                     </li>
                   );
                 })}
-              </ul>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader title="My Recent Sales" />
-            {recentSalesStatus === "loading" && (
-              <div>
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <SkeletonRow key={i} columns={2} />
-                ))}
-              </div>
-            )}
-            {recentSalesStatus === "error" && (
-              <ErrorState
-                title="Unable to load your sales"
-                description="Check your connection or permissions and try again."
-                onRetry={loadRecentSales}
-              />
-            )}
-            {recentSalesStatus === "success" && recentSales.length === 0 && (
-              <EmptyState
-                icon={<Receipt size={22} />}
-                title="No sales recorded yet"
-                description="Sales you complete will show up here."
-              />
-            )}
-            {recentSalesStatus === "success" && recentSales.length > 0 && (
-              <ul className="flex flex-col divide-y divide-border-light">
-                {recentSales.map((sale) => (
-                  <li key={sale.id} className="flex items-center justify-between py-2.5 text-[13px]">
-                    <div>
-                      <p className="font-medium text-text-primary">{sale.invoiceNumber}</p>
-                      <p className="text-[11px] text-text-muted">
-                        {formatTime(sale.createdAt)} · {paymentLabel[sale.paymentMethod]}
-                      </p>
-                    </div>
-                    <span className="tabular-nums font-medium text-text-primary">
-                      {formatCurrency(sale.totalAmount)}
-                    </span>
-                  </li>
-                ))}
               </ul>
             )}
           </Card>
@@ -393,6 +333,12 @@ export function RecordSale() {
           )}
         </Card>
       </div>
+
+      {profile && (
+        <div className="mt-6">
+          <MySalesHistory key={historyRefreshKey} agentId={profile.id} />
+        </div>
+      )}
     </div>
   );
 }
