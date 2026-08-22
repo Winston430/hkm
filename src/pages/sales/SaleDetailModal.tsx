@@ -72,8 +72,8 @@ export function SaleDetailModal({
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-3">
           <div>
-            <p className="text-[11px] uppercase text-text-muted">Salesperson</p>
-            <p className="mt-0.5 text-text-primary">{sale.salespersonName}</p>
+            <p className="text-[11px] uppercase text-text-muted">Agent</p>
+            <p className="mt-0.5 text-text-primary">{sale.agentName}</p>
           </div>
           <div>
             <p className="text-[11px] uppercase text-text-muted">Payment</p>

@@ -4,6 +4,7 @@ import { WarningCircle } from "@phosphor-icons/react";
 import { useAuth } from "../hooks/useAuth";
 import { Button } from "../components/ui/Button";
 import { logout } from "../services/auth";
+import type { UserRole } from "../types/user";
 
 function AccessScreen({
   title,
@@ -31,7 +32,18 @@ function AccessScreen({
   );
 }
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+const roleLabel: Record<UserRole, string> = {
+  admin: "administrators",
+  agent: "agents",
+};
+
+export function ProtectedRoute({
+  children,
+  roles,
+}: {
+  children: ReactNode;
+  roles: UserRole[];
+}) {
   const { status, profile, error } = useAuth();
 
   if (status === "loading") {
@@ -58,11 +70,13 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (profile.role !== "admin") {
+  if (!roles.includes(profile.role)) {
     return (
       <AccessScreen
         title="Access restricted"
-        description="This area is only available to administrators."
+        description={`This area is only available to ${roles
+          .map((role) => roleLabel[role])
+          .join(" and ")}.`}
       />
     );
   }

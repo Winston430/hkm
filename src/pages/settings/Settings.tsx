@@ -29,7 +29,7 @@ export function Settings() {
             <div>
               <p className="text-[11px] uppercase text-text-muted">Role</p>
               <Badge variant="neutral">
-                {profile?.role === "admin" ? "Admin" : "Salesperson"}
+                {profile?.role === "admin" ? "Admin" : "Agent"}
               </Badge>
             </div>
           </div>

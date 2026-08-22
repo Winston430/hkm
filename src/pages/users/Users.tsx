@@ -74,7 +74,7 @@ export function Users() {
     <div>
       <PageHeader
         title="Users"
-        description="Manage admin and salesperson accounts"
+        description="Manage admin and agent accounts"
         action={
           <Button icon={<Plus size={15} />} onClick={() => setFormOpen(true)}>
             Add User
@@ -125,7 +125,7 @@ export function Users() {
                     <Td className="text-text-secondary">{user.email}</Td>
                     <Td>
                       <Badge variant="neutral">
-                        {user.role === "admin" ? "Admin" : "Salesperson"}
+                        {user.role === "admin" ? "Admin" : "Agent"}
                       </Badge>
                     </Td>
                     <Td>
@@ -158,12 +158,12 @@ export function Users() {
                               onClick={() =>
                                 handleRoleChange(
                                   user,
-                                  user.role === "admin" ? "salesperson" : "admin",
+                                  user.role === "admin" ? "agent" : "admin",
                                 )
                               }
                             >
                               {user.role === "admin"
-                                ? "Make Salesperson"
+                                ? "Make Agent"
                                 : "Make Admin"}
                             </DropdownItem>
                             <DropdownItem

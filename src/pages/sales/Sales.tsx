@@ -72,7 +72,7 @@ export function Sales() {
       const matchesTerm =
         !term ||
         sale.invoiceNumber.toLowerCase().includes(term) ||
-        sale.salespersonName.toLowerCase().includes(term);
+        sale.agentName.toLowerCase().includes(term);
       const matchesDate = isSameDay(sale.createdAt, date);
       const matchesPayment =
         paymentFilter === "all" || sale.paymentMethod === paymentFilter;
@@ -101,7 +101,7 @@ export function Sales() {
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="w-full max-w-xs">
             <SearchInput
-              placeholder="Search invoice or salesperson"
+              placeholder="Search invoice or agent"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -156,7 +156,7 @@ export function Sales() {
               <TableHead>
                 <Th>Invoice</Th>
                 <Th>Date</Th>
-                <Th>Salesperson</Th>
+                <Th>Agent</Th>
                 <Th>Items</Th>
                 <Th>Amount</Th>
                 <Th>Payment</Th>
@@ -176,7 +176,7 @@ export function Sales() {
                       {formatTime(sale.createdAt)}
                     </Td>
                     <Td className="text-text-secondary">
-                      {sale.salespersonName}
+                      {sale.agentName}
                     </Td>
                     <Td className="text-text-secondary">
                       {sale.items.length}
