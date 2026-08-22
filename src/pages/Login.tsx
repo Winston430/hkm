@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import { FirebaseError } from "firebase/app";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -26,7 +26,6 @@ function loginErrorMessage(error: unknown): string {
 
 export function Login() {
   const { status } = useAuth();
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -41,11 +40,12 @@ export function Login() {
     setError(null);
     setSubmitting(true);
     try {
+      // Sign-in success flips AuthContext's status to "authenticated" via
+      // onAuthStateChanged, which triggers the redirect above. No manual
+      // navigate() here — that would race the async auth state update.
       await login(email, password);
-      navigate("/admin/dashboard", { replace: true });
     } catch (err) {
       setError(loginErrorMessage(err));
-    } finally {
       setSubmitting(false);
     }
   }
@@ -92,6 +92,15 @@ export function Login() {
             {submitting ? "Signing in..." : "Sign In"}
           </Button>
         </form>
+
+        <div className="mt-6 flex justify-center gap-4 text-[11px] text-text-muted">
+          <Link to="/privacy" className="hover:text-text-secondary">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="hover:text-text-secondary">
+            Terms of Service
+          </Link>
+        </div>
       </div>
     </div>
   );

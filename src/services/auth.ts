@@ -1,9 +1,12 @@
 import {
   browserLocalPersistence,
+  EmailAuthProvider,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   type User as FirebaseUser,
 } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -24,6 +27,18 @@ export async function login(email: string, password: string) {
 
 export async function logout() {
   await signOut(auth);
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+) {
+  const user = auth.currentUser;
+  if (!user || !user.email) throw new Error("Not signed in");
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
 }
 
 export async function fetchUserProfile(uid: string): Promise<AppUser | null> {

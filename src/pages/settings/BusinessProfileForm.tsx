@@ -1,0 +1,113 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { Card, CardHeader } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
+import { Button } from "../../components/ui/Button";
+import { Skeleton } from "../../components/ui/Skeleton";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { getBusinessProfile, saveBusinessProfile } from "../../services/settings";
+
+type Status = "loading" | "success" | "error";
+
+export function BusinessProfileForm() {
+  const [status, setStatus] = useState<Status>("loading");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [currency, setCurrency] = useState("TZS");
+  const [submitting, setSubmitting] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function load() {
+    setStatus("loading");
+    try {
+      const profile = await getBusinessProfile();
+      if (profile) {
+        setName(profile.name);
+        setPhone(profile.phone);
+        setAddress(profile.address);
+        setCurrency(profile.currency);
+      }
+      setStatus("success");
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    setSubmitting(true);
+    setSaved(false);
+    try {
+      await saveBusinessProfile({ name, phone, address, currency });
+      setSaved(true);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Business Profile" />
+
+      {status === "loading" && (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-full" />
+        </div>
+      )}
+
+      {status === "error" && <ErrorState onRetry={load} />}
+
+      {status === "success" && (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Input
+              id="business-name"
+              label="Business Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+            <Input
+              id="business-phone"
+              label="Phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          </div>
+          <Input
+            id="business-address"
+            label="Address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+          <div className="max-w-[160px]">
+            <Input
+              id="business-currency"
+              label="Currency Code"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+            />
+          </div>
+
+          {saved && (
+            <p className="rounded-md bg-success-light px-3 py-2 text-[12px] text-success">
+              Business profile saved successfully.
+            </p>
+          )}
+
+          <div>
+            <Button type="submit" size="sm" disabled={submitting}>
+              {submitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Card>
+  );
+}
