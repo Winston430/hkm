@@ -4,7 +4,15 @@ import { AppShell } from "./components/layout/AppShell";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Dashboard } from "./pages/dashboard/Dashboard";
-import { ComingSoon } from "./pages/ComingSoon";
+import { Categories } from "./pages/categories/Categories";
+import { Products } from "./pages/products/Products";
+import { Inventory } from "./pages/inventory/Inventory";
+import { Sales } from "./pages/sales/Sales";
+import { Users } from "./pages/users/Users";
+import { Reports } from "./pages/reports/Reports";
+import { Settings } from "./pages/settings/Settings";
+import { PrivacyPolicy } from "./pages/legal/PrivacyPolicy";
+import { TermsOfService } from "./pages/legal/TermsOfService";
 
 function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,6 +26,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfService />} />
 
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
       <Route
@@ -36,7 +46,7 @@ export default function App() {
         path="/admin/products"
         element={
           <AdminLayout>
-            <ComingSoon title="Products" />
+            <Products />
           </AdminLayout>
         }
       />
@@ -44,7 +54,7 @@ export default function App() {
         path="/admin/categories"
         element={
           <AdminLayout>
-            <ComingSoon title="Categories" />
+            <Categories />
           </AdminLayout>
         }
       />
@@ -52,7 +62,7 @@ export default function App() {
         path="/admin/inventory"
         element={
           <AdminLayout>
-            <ComingSoon title="Inventory" />
+            <Inventory />
           </AdminLayout>
         }
       />
@@ -60,7 +70,7 @@ export default function App() {
         path="/admin/sales"
         element={
           <AdminLayout>
-            <ComingSoon title="Sales" />
+            <Sales />
           </AdminLayout>
         }
       />
@@ -68,7 +78,7 @@ export default function App() {
         path="/admin/users"
         element={
           <AdminLayout>
-            <ComingSoon title="Users" />
+            <Users />
           </AdminLayout>
         }
       />
@@ -76,7 +86,7 @@ export default function App() {
         path="/admin/reports"
         element={
           <AdminLayout>
-            <ComingSoon title="Reports" />
+            <Reports />
           </AdminLayout>
         }
       />
@@ -84,7 +94,7 @@ export default function App() {
         path="/admin/settings"
         element={
           <AdminLayout>
-            <ComingSoon title="Settings" />
+            <Settings />
           </AdminLayout>
         }
       />

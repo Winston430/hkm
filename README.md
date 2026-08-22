@@ -21,7 +21,31 @@ npm run dev
 
 Expected collections: `users`, `products`, `categories`, `sales`, `stock_movements`.
 
-An authenticated user must have a matching document in `users/{uid}` with a `role` field (`admin` or `salesperson`) for the admin app to resolve their profile.
+An authenticated user must have a matching document in `users/{uid}` with `role` (`admin` or `salesperson`) and `status` (`active` or `inactive`) fields for the admin app to resolve their profile. Only `role: "admin"` and `status: "active"` accounts can access `/admin/*`.
+
+Security rules live in `firestore.rules` (deploy with `firebase deploy --only firestore:rules` once you've run `firebase init` / set the project with the Firebase CLI). They enforce the same admin-only write access at the database level — the frontend route guard alone is not security.
+
+### Creating the first admin user
+
+Firestore rules require an existing admin `users/{uid}` doc before anyone can create further user docs, so bootstrap the very first admin manually:
+
+1. In the Firebase console, under Authentication, create a user with an email and password.
+2. Copy that user's UID.
+3. In Firestore, create a document at `users/{uid}` with:
+   ```json
+   {
+     "name": "Your Name",
+     "email": "you@example.com",
+     "role": "admin",
+     "status": "active",
+     "lastActivityAt": null,
+     "createdAt": 0,
+     "updatedAt": 0
+   }
+   ```
+4. Sign in with that email/password from `/login`.
+
+Once you have one admin account, use the in-app Users screen to create the rest.
 
 ## Project structure
 
