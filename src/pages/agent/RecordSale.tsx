@@ -43,6 +43,7 @@ export function RecordSale() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [lastInvoice, setLastInvoice] = useState<string | null>(null);
   const [recentSales, setRecentSales] = useState<Sale[]>([]);
+  const [recentSalesStatus, setRecentSalesStatus] = useState<PageStatus>("loading");
 
   async function loadProducts() {
     setStatus("loading");
@@ -57,12 +58,13 @@ export function RecordSale() {
 
   async function loadRecentSales() {
     if (!profile) return;
+    setRecentSalesStatus("loading");
     try {
       const data = await listSalesByAgent(profile.id, 8);
       setRecentSales(data);
+      setRecentSalesStatus("success");
     } catch {
-      // Non-critical: the sale itself already succeeded if this is reached
-      // from handleSubmit, so failing to refresh history isn't surfaced.
+      setRecentSalesStatus("error");
     }
   }
 
@@ -252,13 +254,28 @@ export function RecordSale() {
 
           <Card>
             <CardHeader title="My Recent Sales" />
-            {recentSales.length === 0 ? (
+            {recentSalesStatus === "loading" && (
+              <div>
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <SkeletonRow key={i} columns={2} />
+                ))}
+              </div>
+            )}
+            {recentSalesStatus === "error" && (
+              <ErrorState
+                title="Unable to load your sales"
+                description="Check your connection or permissions and try again."
+                onRetry={loadRecentSales}
+              />
+            )}
+            {recentSalesStatus === "success" && recentSales.length === 0 && (
               <EmptyState
                 icon={<Receipt size={22} />}
                 title="No sales recorded yet"
                 description="Sales you complete will show up here."
               />
-            ) : (
+            )}
+            {recentSalesStatus === "success" && recentSales.length > 0 && (
               <ul className="flex flex-col divide-y divide-border-light">
                 {recentSales.map((sale) => (
                   <li key={sale.id} className="flex items-center justify-between py-2.5 text-[13px]">
