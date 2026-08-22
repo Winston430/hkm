@@ -1,13 +1,5 @@
 {
   "projects": {
-<<<<<<< HEAD
-    "hkm": "hekima-da51e"
-  },
-  "targets": {},
-  "etags": {}
-}
-=======
     "default": "hekima-da51e"
   }
 }
->>>>>>> 57302b6c6d3b29c5345d5add549e94456db2e43a
