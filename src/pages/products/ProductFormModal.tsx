@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { isSkuTaken, type ProductInput } from "../../services/products";
+import { formatCurrency } from "../../lib/format";
 import type { Category, Product } from "../../types/product";
 
 interface FormState {
@@ -46,6 +48,17 @@ function toForm(product: Product): FormState {
   };
 }
 
+/** Blank -> 0 (fields are optional-with-a-default). Anything non-numeric
+ *  or negative -> null, so the caller can reject it instead of silently
+ *  saving a wrong number. */
+function parseNonNegativeNumber(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return 0;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return value;
+}
+
 export function ProductFormModal({
   open,
   onClose,
@@ -76,36 +89,69 @@ export function ProductFormModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  // Live margin preview — informational only, doesn't block submission.
+  const costPreview = Number(form.costPrice);
+  const pricePreview = Number(form.sellingPrice);
+  const canShowMargin =
+    form.costPrice.trim() !== "" &&
+    form.sellingPrice.trim() !== "" &&
+    Number.isFinite(costPreview) &&
+    Number.isFinite(pricePreview);
+  const marginAmount = canShowMargin ? pricePreview - costPreview : 0;
+  const marginPercent =
+    canShowMargin && costPreview > 0 ? (marginAmount / costPreview) * 100 : null;
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
 
-    if (!form.name.trim() || !form.sku.trim() || !form.categoryId) {
+    const trimmedName = form.name.trim();
+    const trimmedSku = form.sku.trim();
+
+    if (!trimmedName || !trimmedSku || !form.categoryId) {
       setError("Name, SKU, and category are required.");
       return;
     }
 
-    const costPrice = Number(form.costPrice) || 0;
-    const sellingPrice = Number(form.sellingPrice);
-    const minimumStock = Number(form.minimumStock) || 0;
-    const stock = Number(form.stock) || 0;
+    const costPrice = parseNonNegativeNumber(form.costPrice);
+    if (costPrice === null) {
+      setError("Enter a valid cost price (0 or more).");
+      return;
+    }
 
-    if (!sellingPrice || sellingPrice <= 0) {
+    const sellingPrice = parseNonNegativeNumber(form.sellingPrice);
+    if (sellingPrice === null || sellingPrice <= 0) {
       setError("Enter a valid selling price.");
       return;
     }
 
+    const minimumStock = parseNonNegativeNumber(form.minimumStock);
+    if (minimumStock === null) {
+      setError("Enter a valid minimum stock (0 or more).");
+      return;
+    }
+
+    let stock = 0;
+    if (!product) {
+      const parsedStock = parseNonNegativeNumber(form.stock);
+      if (parsedStock === null) {
+        setError("Enter a valid initial stock (0 or more).");
+        return;
+      }
+      stock = parsedStock;
+    }
+
     setSubmitting(true);
     try {
-      const taken = await isSkuTaken(form.sku.trim(), product?.id);
+      const taken = await isSkuTaken(trimmedSku, product?.id);
       if (taken) {
         setError("A product with this SKU already exists.");
         return;
       }
 
       const payload = {
-        name: form.name.trim(),
-        sku: form.sku.trim(),
+        name: trimmedName,
+        sku: trimmedSku,
         categoryId: form.categoryId,
         costPrice,
         sellingPrice,
@@ -135,11 +181,27 @@ export function ProductFormModal({
       width="lg"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button size="sm" type="submit" form="product-form" disabled={submitting}>
-            {submitting ? "Saving..." : "Save Product"}
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="spinner-dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                Saving
+              </span>
+            ) : (
+              "Save Product"
+            )}
           </Button>
         </>
       }
@@ -201,7 +263,7 @@ export function ProductFormModal({
             value={form.sellingPrice}
             onChange={(e) => set("sellingPrice", e.target.value)}
           />
-          {!product && (
+          {!product ? (
             <Input
               id="product-stock"
               label="Initial Stock"
@@ -210,6 +272,10 @@ export function ProductFormModal({
               value={form.stock}
               onChange={(e) => set("stock", e.target.value)}
             />
+          ) : (
+            <p className="flex items-end pb-2.5 text-[11px] leading-snug text-text-muted">
+              Stock is adjusted from the Inventory screen.
+            </p>
           )}
           <Input
             id="product-min-stock"
@@ -221,18 +287,39 @@ export function ProductFormModal({
           />
         </div>
 
+        {canShowMargin && (
+          <p
+            className={`-mt-2 text-[12px] ${
+              marginAmount < 0 ? "text-danger" : "text-text-muted"
+            }`}
+          >
+            Margin:{" "}
+            <span className="font-medium tabular-nums">
+              {formatCurrency(marginAmount)}
+            </span>
+            {marginPercent !== null && (
+              <span className="tabular-nums"> ({marginPercent.toFixed(1)}%)</span>
+            )}
+            {marginAmount < 0 && " — selling below cost"}
+          </p>
+        )}
+
         <label className="flex items-center gap-2 text-[13px] text-text-primary">
           <input
             type="checkbox"
             checked={form.active}
             onChange={(e) => set("active", e.target.checked)}
-            className="h-4 w-4 rounded border-border accent-black"
+            className="h-4 w-4 rounded border-border accent-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
           />
           Active (visible for sale)
         </label>
 
         {error && (
-          <p className="rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger">
+          <p
+            role="alert"
+            className="flex items-start gap-1.5 rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger"
+          >
+            <WarningCircle size={14} weight="fill" className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}

@@ -1,4 +1,5 @@
-import { createContext, useEffect, useState, type ReactNode } from "react";
+// store/AuthContext.tsx
+import { createContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { User as FirebaseUser } from "firebase/auth";
 import { fetchUserProfile, logout, subscribeToAuthChanges } from "../services/auth";
 import { ensureSessionExpiry } from "../lib/session";
@@ -7,19 +8,23 @@ import type { AppUser } from "../types/user";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
-interface AuthContextValue {
+interface RawAuthState {
   status: AuthStatus;
   firebaseUser: FirebaseUser | null;
   profile: AppUser | null;
   error: string | null;
 }
 
-export const AuthContext = createContext<AuthContextValue>({
-  status: "loading",
-  firebaseUser: null,
-  profile: null,
-  error: null,
-});
+interface AuthContextValue extends RawAuthState {
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isAgent: boolean;
+}
+
+// No fake default state. A component that reads this outside
+// <AuthProvider> should fail loudly (via useAuth), not sit in a
+// permanent, silent "loading" state.
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function expireSession() {
   logout().catch(() => {
@@ -31,7 +36,7 @@ function expireSession() {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthContextValue>({
+  const [state, setState] = useState<RawAuthState>({
     status: "loading",
     firebaseUser: null,
     profile: null,
@@ -94,7 +99,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return (
-    <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
+  // Derived flags computed in one place, so pages stop repeating
+  // `profile?.role === "admin"` ternaries individually.
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      ...state,
+      isAuthenticated: state.status === "authenticated",
+      isAdmin: state.profile?.role === "admin",
+      isAgent: state.profile?.role === "agent",
+    }),
+    [state]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

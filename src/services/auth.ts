@@ -3,6 +3,7 @@ import {
   EmailAuthProvider,
   onAuthStateChanged,
   reauthenticateWithCredential,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
@@ -25,6 +26,10 @@ export async function login(email: string, password: string) {
   const credential = await signInWithEmailAndPassword(auth, email, password);
   startSession();
   return credential.user;
+}
+
+export function sendPasswordReset(email: string) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 export async function logout() {

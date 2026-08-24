@@ -1,30 +1,68 @@
+// pages/legal/LegalLayout.tsx
+import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import type { ReactNode } from "react";
+import { ArrowLeft } from "@phosphor-icons/react";
 
-export function LegalLayout({
-  title,
-  updated,
-  children,
-}: {
+interface LegalLayoutProps {
   title: string;
+  /** ISO date string, e.g. "2026-08-24" — rendered inside a <time> element. */
   updated: string;
+  description?: string;
   children: ReactNode;
-}) {
+}
+
+/** Wraps legal pages in a single <article> with one <h1> and
+ *  <section>/<h2> children — the structure Firefox's and Safari's
+ *  reader-mode parsers look for when triggered on a live, rendered page. */
+export function LegalLayout({ title, updated, description, children }: LegalLayoutProps) {
+  useEffect(() => {
+    document.title = `${title} | Stationery Manager`;
+
+    if (!description) return;
+    let meta = document.querySelector('meta[name="description"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "description");
+      document.head.appendChild(meta);
+    }
+    const previous = meta.getAttribute("content");
+    meta.setAttribute("content", description);
+    return () => {
+      if (previous !== null) meta!.setAttribute("content", previous);
+    };
+  }, [title, description]);
+
+  const formattedDate = new Date(updated).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <div className="min-h-screen bg-background px-4 py-10">
+    <div className="min-h-screen bg-background px-4 py-10 sm:px-6 lg:py-14">
       <div className="mx-auto max-w-2xl">
-        <Link to="/" className="text-[13px] font-semibold text-text-primary">
-          Stationery Manager
+        <Link
+          to="/login"
+          className="mb-8 inline-flex items-center gap-1.5 rounded-sm text-[12px] text-text-muted transition-colors duration-150 hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
+        >
+          <ArrowLeft size={13} />
+          Back
         </Link>
 
-        <div className="mt-6 rounded-lg border border-border bg-surface p-6 sm:p-8">
-          <h1 className="text-[22px] font-semibold text-text-primary">{title}</h1>
-          <p className="mt-1 text-[12px] text-text-muted">Last updated: {updated}</p>
+        <article>
+          <header className="mb-8 border-b border-border-light pb-6">
+            <h1 className="text-[22px] font-semibold tracking-tight text-text-primary">
+              {title}
+            </h1>
+            <p className="mt-1.5 text-[12.5px] text-text-muted">
+              Last updated: <time dateTime={updated}>{formattedDate}</time>
+            </p>
+          </header>
 
-          <div className="prose-legal mt-6 flex flex-col gap-4 text-[13px] leading-6 text-text-secondary">
+          <div className="flex flex-col gap-7 text-[13.5px] leading-relaxed text-text-secondary">
             {children}
           </div>
-        </div>
+        </article>
       </div>
     </div>
   );

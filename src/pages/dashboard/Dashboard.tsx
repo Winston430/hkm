@@ -1,9 +1,12 @@
+// pages/dashboard/Dashboard.tsx
 import { Receipt, Package, WarningCircle, Stack } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { useDashboardData } from "../../hooks/useDashboardData";
+import { useAuth } from "../../hooks/useAuth";
 import { formatCurrency } from "../../lib/format";
+import { getTimeGreeting, getFirstName } from "../../lib/greeting";
 import { MetricCard } from "./MetricCard";
 import { SalesTrendChart } from "./SalesTrendChart";
 import { RecentSalesCard } from "./RecentSalesCard";
@@ -13,13 +16,28 @@ import { DashboardSkeleton } from "./DashboardSkeleton";
 
 export function Dashboard() {
   const { status, data, reload } = useDashboardData();
+  const { profile } = useAuth();
+
+  const firstName = getFirstName(profile?.name); // swap `name` for your actual AppUser field
+  const greeting = firstName ? `${getTimeGreeting()}, ${firstName}` : getTimeGreeting();
+  const today = new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date());
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        description="Business overview for today"
-      />
+      {/* Topbar wayfinding — stays "Dashboard" on every visit, same as every other page */}
+      <PageHeader title="Dashboard" description="Business overview for today" />
+
+      {/* Page content — the personalized part lives here, not in the topbar */}
+      <div className="mb-6">
+        <h1 className="text-[20px] font-semibold tracking-tight text-text-primary">
+          {greeting}
+        </h1>
+        <p className="mt-0.5 text-[13px] text-text-muted">{today}</p>
+      </div>
 
       {status === "loading" && <DashboardSkeleton />}
 

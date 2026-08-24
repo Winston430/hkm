@@ -1,23 +1,21 @@
+// components/ui/PageHeader.tsx
 import type { ReactNode } from "react";
+import { usePageHeader } from "../../context/PageHeaderContext";
 
-export function PageHeader({
-  title,
-  description,
-  action,
-}: {
+interface PageHeaderProps {
   title: string;
   description?: string;
   action?: ReactNode;
-}) {
+}
+
+export function PageHeader({ title, description, action }: PageHeaderProps) {
+  usePageHeader(title, description);
+
+  if (!action) return null;
+
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="text-[22px] font-semibold text-text-primary">{title}</h1>
-        {description && (
-          <p className="mt-1 text-[13px] text-text-secondary">{description}</p>
-        )}
-      </div>
-      {action && <div className="flex items-center gap-2">{action}</div>}
+    <div className="mb-4 flex justify-end">
+      <div className="flex items-center gap-2">{action}</div>
     </div>
   );
 }

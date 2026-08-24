@@ -32,6 +32,7 @@ import { ProductFormModal } from "./ProductFormModal";
 
 type Status = "loading" | "success" | "error";
 const PAGE_SIZE = 10;
+const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
 
 export function Products() {
   const navigate = useNavigate();
@@ -47,6 +48,9 @@ export function Products() {
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [needsCategoryNotice, setNeedsCategoryNotice] = useState(false);
+
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
 
   async function load() {
     setStatus("loading");
@@ -66,6 +70,14 @@ export function Products() {
   useEffect(() => {
     load();
   }, []);
+
+  // Clears the row-flash highlight after it finishes animating, so the
+  // same row can flash again on a subsequent edit.
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = setTimeout(() => setFlashId(null), FLASH_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [flashId]);
 
   const categoryName = useMemo(() => {
     const map = new Map(categories.map((c) => [c.id, c.name]));
@@ -111,6 +123,7 @@ export function Products() {
     setProducts((prev) =>
       [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
     );
+    setFlashId(created.id);
     toast.success("Product saved successfully.");
   }
 
@@ -121,17 +134,26 @@ export function Products() {
         .map((p) => (p.id === id ? { ...p, ...input, updatedAt } : p))
         .sort((a, b) => a.name.localeCompare(b.name)),
     );
+    setFlashId(id);
     toast.success("Product saved successfully.");
   }
 
   async function handleToggleActive(product: Product) {
-    const { updatedAt } = await setProductActive(product.id, !product.active);
-    setProducts((prev) =>
-      prev.map((p) =>
-        p.id === product.id ? { ...p, active: !product.active, updatedAt } : p,
-      ),
-    );
-    toast.success(product.active ? "Product deactivated." : "Product activated.");
+    setTogglingId(product.id);
+    try {
+      const { updatedAt } = await setProductActive(product.id, !product.active);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === product.id ? { ...p, active: !product.active, updatedAt } : p,
+        ),
+      );
+      setFlashId(product.id);
+      toast.success(product.active ? "Product deactivated." : "Product activated.");
+    } catch {
+      toast.error("Unable to update product status. Please try again.");
+    } finally {
+      setTogglingId(null);
+    }
   }
 
   async function handleDelete() {
@@ -176,7 +198,7 @@ export function Products() {
               variant="secondary"
               icon={<DownloadSimple size={15} />}
               onClick={handleExport}
-              disabled={filtered.length === 0}
+              disabled={status !== "success" || filtered.length === 0}
             >
               Export CSV
             </Button>
@@ -242,80 +264,98 @@ export function Products() {
 
         {status === "success" && filtered.length > 0 && (
           <>
-            <Table>
-              <TableHead>
-                <Th>Product</Th>
-                <Th>SKU</Th>
-                <Th>Category</Th>
-                <Th>Selling Price</Th>
-                <Th>Stock</Th>
-                <Th>Status</Th>
-                <Th>Actions</Th>
-              </TableHead>
-              <tbody>
-                {paged.map((product) => {
-                  const stockStatus = getStockStatus(product);
-                  return (
-                    <Tr key={product.id}>
-                      <Td className="font-medium">{product.name}</Td>
-                      <Td className="text-text-secondary">{product.sku}</Td>
-                      <Td className="text-text-secondary">
-                        {categoryName(product.categoryId)}
-                      </Td>
-                      <Td className="tabular-nums">
-                        {formatCurrency(product.sellingPrice)}
-                      </Td>
-                      <Td>
-                        {stockStatus === "in-stock" ? (
-                          <span className="tabular-nums text-text-primary">
-                            {product.stock}
-                          </span>
-                        ) : (
-                          <div className="flex items-center gap-2">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHead>
+                  <Th>Product</Th>
+                  <Th>SKU</Th>
+                  <Th>Category</Th>
+                  <Th>Selling Price</Th>
+                  <Th>Stock</Th>
+                  <Th>Status</Th>
+                  <Th>Actions</Th>
+                </TableHead>
+                <tbody>
+                  {paged.map((product) => {
+                    const stockStatus = getStockStatus(product);
+                    const isToggling = togglingId === product.id;
+                    return (
+                      <Tr
+                        key={product.id}
+                        className={product.id === flashId ? "row-flash" : undefined}
+                      >
+                        <Td className="font-medium">{product.name}</Td>
+                        <Td className="text-text-secondary">{product.sku}</Td>
+                        <Td className="text-text-secondary">
+                          {categoryName(product.categoryId)}
+                        </Td>
+                        <Td className="tabular-nums">
+                          {formatCurrency(product.sellingPrice)}
+                        </Td>
+                        <Td>
+                          {stockStatus === "in-stock" ? (
                             <span className="tabular-nums text-text-primary">
                               {product.stock}
                             </span>
-                            <Badge
-                              variant={
-                                stockStatus === "out-of-stock" ? "danger" : "orange"
-                              }
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="tabular-nums text-text-primary">
+                                {product.stock}
+                              </span>
+                              <Badge
+                                variant={
+                                  stockStatus === "out-of-stock" ? "danger" : "orange"
+                                }
+                              >
+                                {stockStatus === "out-of-stock"
+                                  ? "Out of Stock"
+                                  : "Low Stock"}
+                              </Badge>
+                            </div>
+                          )}
+                        </Td>
+                        <Td>
+                          <Badge variant="neutral">
+                            {product.active ? "Active" : "Inactive"}
+                          </Badge>
+                        </Td>
+                        <Td>
+                          <Dropdown
+                            trigger={
+                              <button
+                                type="button"
+                                aria-label={`Actions for ${product.name}`}
+                                aria-haspopup="menu"
+                                className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-150 hover:bg-surface-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
+                              >
+                                <DotsThreeVertical size={16} weight="bold" />
+                              </button>
+                            }
+                          >
+                            <DropdownItem onClick={() => openEdit(product)}>
+                              Edit
+                            </DropdownItem>
+                            <DropdownItem
+                              disabled={isToggling}
+                              onClick={() => handleToggleActive(product)}
                             >
-                              {stockStatus === "out-of-stock"
-                                ? "Out of Stock"
-                                : "Low Stock"}
-                            </Badge>
-                          </div>
-                        )}
-                      </Td>
-                      <Td>
-                        <Badge variant="neutral">
-                          {product.active ? "Active" : "Inactive"}
-                        </Badge>
-                      </Td>
-                      <Td>
-                        <Dropdown
-                          trigger={
-                            <span className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary hover:bg-surface-secondary">
-                              <DotsThreeVertical size={16} weight="bold" />
-                            </span>
-                          }
-                        >
-                          <DropdownItem onClick={() => openEdit(product)}>
-                            Edit
-                          </DropdownItem>
-                          <DropdownItem onClick={() => handleToggleActive(product)}>
-                            {product.active ? "Deactivate" : "Activate"}
-                          </DropdownItem>
-                          <DropdownItem danger onClick={() => setDeleting(product)}>
-                            Delete
-                          </DropdownItem>
-                        </Dropdown>
-                      </Td>
-                    </Tr>
-                  );
-                })}
-              </tbody>
-            </Table>
+                              {isToggling
+                                ? "Updating…"
+                                : product.active
+                                  ? "Deactivate"
+                                  : "Activate"}
+                            </DropdownItem>
+                            <DropdownItem danger onClick={() => setDeleting(product)}>
+                              Delete
+                            </DropdownItem>
+                          </Dropdown>
+                        </Td>
+                      </Tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
             <div className="mt-3">
               <Pagination
                 page={page}

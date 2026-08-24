@@ -1,3 +1,4 @@
+// pages/reports/Reports.tsx
 import { useMemo, useState } from "react";
 import { DownloadSimple } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -5,7 +6,6 @@ import { Card } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Select";
 import { Button } from "../../components/ui/Button";
 import { ErrorState } from "../../components/ui/ErrorState";
-import { Skeleton } from "../../components/ui/Skeleton";
 import { useReportsData } from "../../hooks/useReportsData";
 import { exportToCsv } from "../../lib/exportCsv";
 import { formatDayLabel, formatTime } from "../../lib/format";
@@ -17,6 +17,7 @@ import { RevenueTrendCard } from "./RevenueTrendCard";
 import { InsightsCard } from "./InsightsCard";
 import { generateInsights } from "./insights";
 import { buildRevenueSeries } from "./series";
+import { ReportsSkeleton } from "./ReportsSkeleton";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -27,24 +28,43 @@ const rangeOptions = [
   { value: "all", label: "All Time" },
 ];
 
+function buildExportFilename(rangeValue: string): string {
+  const option = rangeOptions.find((o) => o.value === rangeValue);
+  const rangeSlug = option
+    ? option.label.toLowerCase().replace(/\s+/g, "-")
+    : "custom-range";
+  const dateSlug = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  return `sales-report-${rangeSlug}-${dateSlug}`;
+}
+
 export function Reports() {
   const { status, sales, products } = useReportsData();
   const [range, setRange] = useState("30");
 
   const windowDays = range === "all" ? null : Number(range);
 
-  const scopedSales = useMemo(() => {
-    if (windowDays === null) return sales;
-    const cutoff = Date.now() - windowDays * DAY_MS;
-    return sales.filter((s) => s.createdAt >= cutoff);
-  }, [sales, windowDays]);
-
-  const previousPeriodSales = useMemo(() => {
+  // Computed once and shared by both filters below, instead of each
+  // recomputing Date.now() independently.
+  const periodCutoffs = useMemo(() => {
     if (windowDays === null) return null;
     const cutoff = Date.now() - windowDays * DAY_MS;
     const previousCutoff = cutoff - windowDays * DAY_MS;
-    return sales.filter((s) => s.createdAt >= previousCutoff && s.createdAt < cutoff);
-  }, [sales, windowDays]);
+    return { cutoff, previousCutoff };
+  }, [windowDays]);
+
+  const scopedSales = useMemo(() => {
+    if (!periodCutoffs) return sales;
+    return sales.filter((s) => s.createdAt >= periodCutoffs.cutoff);
+  }, [sales, periodCutoffs]);
+
+  const previousPeriodSales = useMemo(() => {
+    if (!periodCutoffs) return null;
+    return sales.filter(
+      (s) =>
+        s.createdAt >= periodCutoffs.previousCutoff &&
+        s.createdAt < periodCutoffs.cutoff,
+    );
+  }, [sales, periodCutoffs]);
 
   const revenueSeries = useMemo(
     () => buildRevenueSeries(scopedSales, windowDays),
@@ -63,7 +83,7 @@ export function Reports() {
 
   function handleExport() {
     exportToCsv(
-      `sales-report-${rangeOptions.find((o) => o.value === range)?.label.toLowerCase().replace(/\s+/g, "-")}`,
+      buildExportFilename(range),
       scopedSales.map((sale) => ({
         Invoice: sale.invoiceNumber,
         Date: formatDayLabel(sale.createdAt),
@@ -85,7 +105,11 @@ export function Reports() {
         action={
           <>
             <div className="w-full max-w-[170px]">
-              <Select value={range} onChange={(e) => setRange(e.target.value)}>
+              <Select
+                value={range}
+                onChange={(e) => setRange(e.target.value)}
+                aria-label="Date range"
+              >
                 {rangeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}
@@ -97,7 +121,7 @@ export function Reports() {
               variant="secondary"
               icon={<DownloadSimple size={15} />}
               onClick={handleExport}
-              disabled={scopedSales.length === 0}
+              disabled={status !== "success" || scopedSales.length === 0}
             >
               Export CSV
             </Button>
@@ -105,20 +129,14 @@ export function Reports() {
         }
       />
 
-      {status === "loading" && (
-        <div className="flex flex-col gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <Skeleton className="mb-4 h-4 w-40" />
-              <Skeleton className="h-24 w-full" />
-            </Card>
-          ))}
-        </div>
-      )}
+      {status === "loading" && <ReportsSkeleton />}
 
       {status === "error" && (
         <Card>
           <ErrorState title="Unable to load reports" />
+          {/* No retry wired here — useReportsData() doesn't currently
+              expose a reload/refetch function. Add one and pass it as
+              onRetry, matching Products/Categories/Record Sale. */}
         </Card>
       )}
 

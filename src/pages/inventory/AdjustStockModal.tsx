@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -6,14 +7,22 @@ import { Select } from "../../components/ui/Select";
 import type { Product } from "../../types/product";
 import type { StockMovementReason } from "../../types/sale";
 
-const reasonLabels: Record<Exclude<StockMovementReason, "sale">, string> = {
+type Direction = "in" | "out";
+type AdjustReason = Exclude<StockMovementReason, "sale">;
+
+const reasonLabels: Record<AdjustReason, string> = {
   restock: "Restock",
   adjustment: "Manual Adjustment",
   damaged: "Damaged / Written Off",
   return: "Customer Return",
 };
 
-type Direction = "in" | "out";
+// Which reasons make sense for each direction — keeps the audit log
+// internally consistent (e.g. "Stock In" can never be logged as "Damaged").
+const reasonsByDirection: Record<Direction, AdjustReason[]> = {
+  in: ["restock", "return", "adjustment"],
+  out: ["damaged", "adjustment"],
+};
 
 export function AdjustStockModal({
   open,
@@ -31,7 +40,7 @@ export function AdjustStockModal({
 }) {
   const [direction, setDirection] = useState<Direction>("in");
   const [quantity, setQuantity] = useState("");
-  const [reason, setReason] = useState<StockMovementReason>("restock");
+  const [reason, setReason] = useState<AdjustReason>("restock");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,11 +53,34 @@ export function AdjustStockModal({
     }
   }, [open]);
 
+  function handleDirectionChange(next: Direction) {
+    setDirection(next);
+    setError(null);
+    // Keep the current reason if it's still valid for the new direction,
+    // otherwise fall back to that direction's first option.
+    if (!reasonsByDirection[next].includes(reason)) {
+      setReason(reasonsByDirection[next][0]);
+    }
+  }
+
+  const parsedQuantity = Number(quantity);
+  const hasValidQuantity = quantity.trim() !== "" && Number.isFinite(parsedQuantity) && parsedQuantity > 0;
+  const previewStock = product
+    ? direction === "in"
+      ? product.stock + (hasValidQuantity ? parsedQuantity : 0)
+      : product.stock - (hasValidQuantity ? parsedQuantity : 0)
+    : null;
+  const previewGoesNegative = previewStock !== null && previewStock < 0;
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const amount = Number(quantity);
-    if (!amount || amount <= 0) {
+
+    if (!hasValidQuantity) {
       setError("Enter a quantity greater than zero.");
+      return;
+    }
+    if (direction === "out" && product && parsedQuantity > product.stock) {
+      setError(`Cannot remove more than the current stock (${product.stock} available).`);
       return;
     }
 
@@ -56,7 +88,7 @@ export function AdjustStockModal({
     setError(null);
     try {
       await onSubmit({
-        change: direction === "in" ? amount : -amount,
+        change: direction === "in" ? parsedQuantity : -parsedQuantity,
         reason,
       });
       onClose();
@@ -77,11 +109,27 @@ export function AdjustStockModal({
       width="sm"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button size="sm" type="submit" form="adjust-stock-form" disabled={submitting}>
-            {submitting ? "Saving..." : "Save Adjustment"}
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="spinner-dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                Saving
+              </span>
+            ) : (
+              "Save Adjustment"
+            )}
           </Button>
         </>
       }
@@ -97,53 +145,72 @@ export function AdjustStockModal({
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={() => setDirection("in")}
-            className={`rounded-md border px-3 py-2 text-[13px] font-medium ${
+            onClick={() => handleDirectionChange("in")}
+            className={`rounded-md border px-3 py-2 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35 ${
               direction === "in"
-                ? "border-black bg-black text-white"
-                : "border-border text-text-secondary"
+                ? "border-success bg-success-light text-success"
+                : "border-border text-text-secondary hover:bg-surface-secondary"
             }`}
           >
             Stock In
           </button>
           <button
             type="button"
-            onClick={() => setDirection("out")}
-            className={`rounded-md border px-3 py-2 text-[13px] font-medium ${
+            onClick={() => handleDirectionChange("out")}
+            className={`rounded-md border px-3 py-2 text-[13px] font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35 ${
               direction === "out"
-                ? "border-black bg-black text-white"
-                : "border-border text-text-secondary"
+                ? "border-danger bg-danger-light text-danger"
+                : "border-border text-text-secondary hover:bg-surface-secondary"
             }`}
           >
             Stock Out
           </button>
         </div>
 
-        <Input
-          id="adjust-quantity"
-          label="Quantity"
-          type="number"
-          min="1"
-          autoFocus
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-        />
+        <div>
+          <Input
+            id="adjust-quantity"
+            label="Quantity"
+            type="number"
+            min="1"
+            step={1}
+            inputMode="numeric"
+            autoFocus
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            onWheel={(e) => e.currentTarget.blur()}
+          />
+          {hasValidQuantity && (
+            <p
+              className={`mt-1.5 text-[12px] tabular-nums ${
+                previewGoesNegative ? "text-danger" : "text-text-muted"
+              }`}
+            >
+              New stock will be: <span className="font-medium">{previewStock}</span>
+              {previewGoesNegative && " — exceeds available stock"}
+            </p>
+          )}
+        </div>
 
         <Select
           id="adjust-reason"
           label="Reason"
           value={reason}
-          onChange={(e) => setReason(e.target.value as StockMovementReason)}
+          onChange={(e) => setReason(e.target.value as AdjustReason)}
         >
-          {Object.entries(reasonLabels).map(([value, label]) => (
+          {reasonsByDirection[direction].map((value) => (
             <option key={value} value={value}>
-              {label}
+              {reasonLabels[value]}
             </option>
           ))}
         </Select>
 
         {error && (
-          <p className="rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger">
+          <p
+            role="alert"
+            className="flex items-start gap-1.5 rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger"
+          >
+            <WarningCircle size={14} weight="fill" className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}

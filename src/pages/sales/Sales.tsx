@@ -1,3 +1,4 @@
+// pages/sales/Sales.tsx
 import { useEffect, useMemo, useState } from "react";
 import { DownloadSimple, Receipt } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -22,6 +23,7 @@ import { SaleDetailModal } from "./SaleDetailModal";
 
 type Status = "loading" | "success" | "error";
 const PAGE_SIZE = 10;
+const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
 
 const statusVariant: Record<SaleStatus, "success" | "warning" | "danger"> = {
   completed: "success",
@@ -53,6 +55,7 @@ export function Sales() {
   const [paymentFilter, setPaymentFilter] = useState<"all" | PaymentMethod>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Sale | null>(null);
+  const [flashId, setFlashId] = useState<string | null>(null);
 
   async function load() {
     setStatus("loading");
@@ -68,6 +71,12 @@ export function Sales() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = setTimeout(() => setFlashId(null), FLASH_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [flashId]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -92,16 +101,21 @@ export function Sales() {
 
   async function handleRefund(sale: Sale) {
     if (!profile) return;
+    // No try/catch here by design — SaleDetailModal owns error display and
+    // only closes itself on success, same pattern as ProductFormModal and
+    // AdjustStockModal.
     await refundSale(sale, profile.id, profile.name);
     setSales((prev) =>
       prev.map((s) => (s.id === sale.id ? { ...s, status: "refunded" } : s)),
     );
+    setFlashId(sale.id);
     toast.success("Sale refunded successfully.");
   }
 
   function handleExport() {
+    const dateSlug = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
     exportToCsv(
-      "sales",
+      `sales-${dateSlug}`,
       filtered.map((sale) => ({
         Invoice: sale.invoiceNumber,
         Date: formatDayLabel(sale.createdAt),
@@ -125,7 +139,7 @@ export function Sales() {
             variant="secondary"
             icon={<DownloadSimple size={15} />}
             onClick={handleExport}
-            disabled={filtered.length === 0}
+            disabled={status !== "success" || filtered.length === 0}
           >
             Export CSV
           </Button>
@@ -144,6 +158,7 @@ export function Sales() {
           <div className="w-full max-w-[160px]">
             <Input
               type="date"
+              aria-label="Filter by date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
@@ -187,50 +202,53 @@ export function Sales() {
 
         {status === "success" && filtered.length > 0 && (
           <>
-            <Table>
-              <TableHead>
-                <Th>Invoice</Th>
-                <Th>Date</Th>
-                <Th>Agent</Th>
-                <Th>Items</Th>
-                <Th>Amount</Th>
-                <Th>Payment</Th>
-                <Th>Status</Th>
-              </TableHead>
-              <tbody>
-                {paged.map((sale) => (
-                  <Tr key={sale.id}>
-                    <Td
-                      className="cursor-pointer font-medium text-text-primary hover:underline"
-                      onClick={() => setSelected(sale)}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHead>
+                  <Th>Invoice</Th>
+                  <Th>Date</Th>
+                  <Th>Agent</Th>
+                  <Th>Items</Th>
+                  <Th>Amount</Th>
+                  <Th>Payment</Th>
+                  <Th>Status</Th>
+                </TableHead>
+                <tbody>
+                  {paged.map((sale) => (
+                    <Tr
+                      key={sale.id}
+                      className={sale.id === flashId ? "row-flash" : undefined}
                     >
-                      {sale.invoiceNumber}
-                    </Td>
-                    <Td className="text-text-secondary">
-                      {formatDayLabel(sale.createdAt)}{" "}
-                      {formatTime(sale.createdAt)}
-                    </Td>
-                    <Td className="text-text-secondary">
-                      {sale.agentName}
-                    </Td>
-                    <Td className="text-text-secondary">
-                      {sale.items.length}
-                    </Td>
-                    <Td className="font-medium tabular-nums">
-                      {formatCurrency(sale.totalAmount)}
-                    </Td>
-                    <Td className="text-text-secondary">
-                      {paymentLabel[sale.paymentMethod]}
-                    </Td>
-                    <Td>
-                      <Badge variant={statusVariant[sale.status]}>
-                        {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
-                      </Badge>
-                    </Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </Table>
+                      <Td>
+                        <button
+                          type="button"
+                          onClick={() => setSelected(sale)}
+                          className="rounded-sm font-medium text-text-primary underline-offset-2 transition-colors duration-150 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
+                        >
+                          {sale.invoiceNumber}
+                        </button>
+                      </Td>
+                      <Td className="text-text-secondary">
+                        {formatDayLabel(sale.createdAt)} {formatTime(sale.createdAt)}
+                      </Td>
+                      <Td className="text-text-secondary">{sale.agentName}</Td>
+                      <Td className="text-text-secondary">{sale.items.length}</Td>
+                      <Td className="font-medium tabular-nums">
+                        {formatCurrency(sale.totalAmount)}
+                      </Td>
+                      <Td className="text-text-secondary">
+                        {paymentLabel[sale.paymentMethod]}
+                      </Td>
+                      <Td>
+                        <Badge variant={statusVariant[sale.status]}>
+                          {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
             <div className="mt-3">
               <Pagination
                 page={page}

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, ShoppingCart, Trash } from "@phosphor-icons/react";
+import { useEffect, useMemo, useState, type InputHTMLAttributes } from "react";
+import { MagnifyingGlass, Plus, ShoppingCart, Trash } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -26,6 +26,31 @@ interface CartLine {
   unitPrice: number;
   quantity: number;
   maxStock: number;
+}
+
+interface NumberFieldProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+}
+
+/** Shared quantity/price field — fixes the scroll-wheel value-change bug
+ *  and keeps focus styling consistent with the rest of the app. */
+function NumberField({ label, value, onChange, ...inputProps }: NumberFieldProps) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[11px] text-text-muted">{label}</span>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        onWheel={(e) => e.currentTarget.blur()}
+        className="h-8 rounded-md border border-border px-2 text-[13px] tabular-nums transition-colors duration-150 focus:border-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-orange/25"
+        {...inputProps}
+      />
+    </label>
+  );
 }
 
 export function RecordSale() {
@@ -64,6 +89,12 @@ export function RecordSale() {
       )
       .slice(0, 8);
   }, [products, search]);
+
+  // Lets the search list show "In cart: N" without a lookup per render.
+  const cartQuantities = useMemo(
+    () => new Map(cart.map((line) => [line.productId, line.quantity])),
+    [cart],
+  );
 
   function addToCart(product: Product) {
     setCart((prev) => {
@@ -180,6 +211,16 @@ export function RecordSale() {
               </div>
             )}
 
+            {status === "success" && search.trim() === "" && (
+              <div className="mt-2">
+                <EmptyState
+                  icon={<MagnifyingGlass size={22} />}
+                  title="Search for a product"
+                  description="Type a product name or SKU to start adding items to this sale."
+                />
+              </div>
+            )}
+
             {status === "success" && search.trim() !== "" && results.length === 0 && (
               <p className="mt-4 text-[13px] text-text-muted">
                 No products match "{search}".
@@ -191,6 +232,7 @@ export function RecordSale() {
                 {results.map((product) => {
                   const stockStatus = getStockStatus(product);
                   const outOfStock = stockStatus === "out-of-stock";
+                  const inCartQty = cartQuantities.get(product.id) ?? 0;
                   return (
                     <li
                       key={product.id}
@@ -202,6 +244,9 @@ export function RecordSale() {
                         </p>
                         <p className="text-[11px] text-text-muted">
                           {product.sku} · {formatCurrency(product.sellingPrice)}
+                          {inCartQty > 0 && (
+                            <span className="text-orange-dark"> · In cart: {inCartQty}</span>
+                          )}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
@@ -213,11 +258,11 @@ export function RecordSale() {
                         <Button
                           size="sm"
                           variant="secondary"
-                          icon={<Plus size={14} />}
+                          icon={outOfStock ? undefined : <Plus size={14} />}
                           disabled={outOfStock}
                           onClick={() => addToCart(product)}
                         >
-                          Add
+                          {outOfStock ? "Out of Stock" : "Add"}
                         </Button>
                       </div>
                     </li>
@@ -239,7 +284,7 @@ export function RecordSale() {
             />
           ) : (
             <div className="flex flex-col gap-4">
-              <ul className="flex flex-col gap-3">
+              <ul className="sidebar-scroll flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
                 {cart.map((line) => (
                   <li key={line.productId} className="flex flex-col gap-2 rounded-md border border-border-light p-3">
                     <div className="flex items-start justify-between gap-2">
@@ -250,41 +295,32 @@ export function RecordSale() {
                         type="button"
                         onClick={() => removeFromCart(line.productId)}
                         aria-label={`Remove ${line.productName}`}
-                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted hover:bg-danger-light hover:text-danger"
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-text-muted transition-colors duration-150 hover:bg-danger-light hover:text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
                       >
                         <Trash size={14} />
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-text-muted">Quantity</span>
-                        <input
-                          type="number"
-                          min={1}
-                          max={line.maxStock}
-                          value={line.quantity}
-                          onChange={(e) =>
-                            updateQuantity(line.productId, Number(e.target.value))
-                          }
-                          className="h-8 rounded-md border border-border px-2 text-[13px] focus:border-black focus:outline-none"
-                        />
-                      </label>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[11px] text-text-muted">Unit Price</span>
-                        <input
-                          type="number"
-                          min={0}
-                          value={line.unitPrice}
-                          onChange={(e) =>
-                            updatePrice(line.productId, Number(e.target.value))
-                          }
-                          className="h-8 rounded-md border border-border px-2 text-[13px] focus:border-black focus:outline-none"
-                        />
-                      </label>
+                      <NumberField
+                        label="Quantity"
+                        value={line.quantity}
+                        onChange={(value) => updateQuantity(line.productId, value)}
+                        min={1}
+                        max={line.maxStock}
+                        step={1}
+                        inputMode="numeric"
+                      />
+                      <NumberField
+                        label="Unit Price"
+                        value={line.unitPrice}
+                        onChange={(value) => updatePrice(line.productId, value)}
+                        min={0}
+                        inputMode="decimal"
+                      />
                     </div>
                     <p className="text-right text-[12px] text-text-secondary">
                       Line total:{" "}
-                      <span className="font-medium text-text-primary">
+                      <span className="font-medium tabular-nums text-text-primary">
                         {formatCurrency(line.unitPrice * line.quantity)}
                       </span>
                     </p>
@@ -314,7 +350,18 @@ export function RecordSale() {
                 disabled={submitting}
                 onClick={handleCompleteSale}
               >
-                {submitting ? "Completing Sale..." : "Complete Sale"}
+                {submitting ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="spinner-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                    Completing Sale
+                  </span>
+                ) : (
+                  "Complete Sale"
+                )}
               </Button>
             </div>
           )}

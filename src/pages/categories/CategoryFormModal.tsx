@@ -1,4 +1,6 @@
+// pages/categories/CategoryFormModal.tsx
 import { useEffect, useState, type FormEvent } from "react";
+import { WarningCircle } from "@phosphor-icons/react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -9,11 +11,16 @@ export function CategoryFormModal({
   onClose,
   onSubmit,
   category,
+  categories,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (name: string) => Promise<void>;
   category: Category | null;
+  /** Already-loaded category list, used for a client-side duplicate-name
+   *  check. Not a substitute for a server-side uniqueness check if one
+   *  exists — see note in chat. */
+  categories: Category[];
 }) {
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -28,14 +35,25 @@ export function CategoryFormModal({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim()) {
+
+    const trimmed = name.trim();
+    if (!trimmed) {
       setError("Category name is required.");
       return;
     }
+
+    const isDuplicate = categories.some(
+      (c) => c.id !== category?.id && c.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (isDuplicate) {
+      setError("A category with this name already exists.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(name.trim());
+      await onSubmit(trimmed);
       onClose();
     } catch {
       setError("Unable to save category. Please try again.");
@@ -52,11 +70,27 @@ export function CategoryFormModal({
       width="sm"
       footer={
         <>
-          <Button variant="secondary" size="sm" onClick={onClose}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onClose}
+            disabled={submitting}
+          >
             Cancel
           </Button>
           <Button size="sm" type="submit" form="category-form" disabled={submitting}>
-            {submitting ? "Saving..." : "Save Category"}
+            {submitting ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="spinner-dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </span>
+                Saving
+              </span>
+            ) : (
+              "Save Category"
+            )}
           </Button>
         </>
       }
@@ -70,7 +104,11 @@ export function CategoryFormModal({
           onChange={(e) => setName(e.target.value)}
         />
         {error && (
-          <p className="rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger">
+          <p
+            role="alert"
+            className="flex items-start gap-1.5 rounded-md bg-danger-light px-3 py-2 text-[12px] text-danger"
+          >
+            <WarningCircle size={14} weight="fill" className="mt-0.5 shrink-0" />
             {error}
           </p>
         )}

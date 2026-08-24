@@ -1,3 +1,4 @@
+// pages/categories/Categories.tsx
 import { useEffect, useMemo, useState } from "react";
 import { PencilSimple, Plus, Tag, TrashSimple } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -21,6 +22,10 @@ import { toast } from "../../lib/toast";
 import { CategoryFormModal } from "./CategoryFormModal";
 
 type Status = "loading" | "success" | "error";
+const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
+
+const rowActionButton =
+  "flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35";
 
 export function Categories() {
   const [status, setStatus] = useState<Status>("loading");
@@ -31,6 +36,7 @@ export function Categories() {
   const [deleting, setDeleting] = useState<Category | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
 
   async function load() {
     setStatus("loading");
@@ -46,6 +52,12 @@ export function Categories() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = setTimeout(() => setFlashId(null), FLASH_DURATION_MS);
+    return () => clearTimeout(timer);
+  }, [flashId]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -71,12 +83,14 @@ export function Categories() {
           .map((c) => (c.id === editing.id ? { ...c, name, updatedAt } : c))
           .sort((a, b) => a.name.localeCompare(b.name)),
       );
+      setFlashId(editing.id);
       toast.success("Category updated successfully.");
     } else {
       const created = await createCategory(name);
       setCategories((prev) =>
         [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
       );
+      setFlashId(created.id);
       toast.success("Category created successfully.");
     }
   }
@@ -155,42 +169,47 @@ export function Categories() {
         )}
 
         {status === "success" && filtered.length > 0 && (
-          <Table>
-            <TableHead>
-              <Th>Name</Th>
-              <Th>Actions</Th>
-            </TableHead>
-            <tbody>
-              {filtered.map((category) => (
-                <Tr key={category.id}>
-                  <Td className="font-medium">{category.name}</Td>
-                  <Td>
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(category)}
-                        aria-label={`Edit ${category.name}`}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary hover:bg-surface-secondary"
-                      >
-                        <PencilSimple size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDeleting(category);
-                          setDeleteError(null);
-                        }}
-                        aria-label={`Delete ${category.name}`}
-                        className="flex h-7 w-7 items-center justify-center rounded-md text-text-secondary hover:bg-danger-light hover:text-danger"
-                      >
-                        <TrashSimple size={15} />
-                      </button>
-                    </div>
-                  </Td>
-                </Tr>
-              ))}
-            </tbody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHead>
+                <Th>Name</Th>
+                <Th>Actions</Th>
+              </TableHead>
+              <tbody>
+                {filtered.map((category) => (
+                  <Tr
+                    key={category.id}
+                    className={category.id === flashId ? "row-flash" : undefined}
+                  >
+                    <Td className="font-medium">{category.name}</Td>
+                    <Td>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEdit(category)}
+                          aria-label={`Edit ${category.name}`}
+                          className={`${rowActionButton} hover:bg-surface-secondary hover:text-text-primary`}
+                        >
+                          <PencilSimple size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleting(category);
+                            setDeleteError(null);
+                          }}
+                          aria-label={`Delete ${category.name}`}
+                          className={`${rowActionButton} hover:bg-danger-light hover:text-danger`}
+                        >
+                          <TrashSimple size={15} />
+                        </button>
+                      </div>
+                    </Td>
+                  </Tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
         )}
       </Card>
 
@@ -199,6 +218,7 @@ export function Categories() {
         onClose={() => setFormOpen(false)}
         onSubmit={handleSubmit}
         category={editing}
+        categories={categories}
       />
 
       <ConfirmDialog

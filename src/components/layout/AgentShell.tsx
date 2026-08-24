@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { UserMenu } from "./UserMenu";
+import { Footer } from "./Footer";
 
 export function AgentShell({ children }: { children: ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export function AgentShell({ children }: { children: ReactNode }) {
       <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {children}
       </main>
+      <Footer />
     </div>
   );
 }
