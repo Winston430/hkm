@@ -19,7 +19,7 @@ export function AgentShell({ children }: { children: ReactNode }) {
       <header className="grid h-14 shrink-0 grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border bg-surface px-4 lg:px-6">
         <img
           src="/logo-wordmark.png"
-          alt="Stationery Manager"
+          alt="Hekima Veritas"
           className="h-12 w-auto max-w-[130px] shrink-0 object-contain"
         />
 

@@ -16,7 +16,7 @@ interface LegalLayoutProps {
  *  reader-mode parsers look for when triggered on a live, rendered page. */
 export function LegalLayout({ title, updated, description, children }: LegalLayoutProps) {
   useEffect(() => {
-    document.title = `${title} | Stationery Manager`;
+    document.title = `${title} | Hekima Veritas`;
 
     if (!description) return;
     let meta = document.querySelector('meta[name="description"]');

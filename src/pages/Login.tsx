@@ -110,7 +110,7 @@ export function Login() {
       using currentColor, or if the source file is already white. */}
   <img
     src="/logo-wordmark.png" // ← swap for the real asset path
-    alt="Stationery Manager"
+    alt="Hekima Veritas"
     className="mt-3 h-12 w-auto max-w-[220px] object-contain brightness-0 invert"
   />
 </div>
@@ -141,7 +141,7 @@ export function Login() {
           <div className="mb-7 text-center">
             <p className="text-[15px] font-semibold text-text-primary lg:text-[17px] lg:tracking-tight">
               <span className="lg:hidden">
-                Stationery Manager
+                Hekima Veritas
               </span>
 
               <span className="hidden lg:inline">

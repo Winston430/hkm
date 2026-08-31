@@ -104,7 +104,7 @@ if (status === "authenticated") {
             </span>
           </div>
           <p className="mt-3 text-[22px] font-semibold tracking-tight text-white">
-            Stationery Manager
+            Hekima Veritas
           </p>
         </div>
 

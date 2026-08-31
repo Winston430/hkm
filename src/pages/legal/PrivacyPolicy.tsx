@@ -6,14 +6,14 @@ export function PrivacyPolicy() {
     <LegalLayout
       title="Privacy Policy"
       updated="2026-08-24"
-      description="Privacy Policy for Stationery Manager, describing what account and business data the system collects and how it is used and protected."
+      description="Privacy Policy for Hekima Veritas, describing what account and business data the system collects and how it is used and protected."
     >
       <section>
         <h2 className="mb-2 text-[14px] font-semibold text-text-primary">
           Overview
         </h2>
         <p>
-          This Privacy Policy applies to the Stationery Manager admin
+          This Privacy Policy applies to the Hekima Veritas admin
           application (the "System"), an internal tool used by{" "}
           <strong className="font-medium text-text-primary">
             HEKIMA VERITAS & GENERAL SUPPLY COMPANY LIMITED

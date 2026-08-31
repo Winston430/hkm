@@ -65,13 +65,13 @@ export function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
         {collapsed ? (
           <img
             src="/icon-v.png" // ← swap for the real asset path
-            alt="Stationery Manager"
+            alt="Hekima Veritas"
             className="h-9 w-9 object-contain"
           />
         ) : (
           <img
             src="/logo-wordmark.png" // ← swap for the real asset path
-            alt="Stationery Manager"
+            alt="Hekima Veritas"
             className="h-12 w-auto max-w-[180px] object-contain"
           />
         )}

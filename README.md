@@ -1,4 +1,4 @@
-# Stationery Manager
+# Hekima Veritas
 
 Web application for managing a stationery business: products, categories, inventory, sales, users, and reports.
 

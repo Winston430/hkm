@@ -6,7 +6,7 @@ export function TermsOfService() {
     <LegalLayout
       title="Terms of Service"
       updated="2026-08-24"
-      description="Terms of Service for Stationery Manager, covering account use, acceptable use, and access to the system."
+      description="Terms of Service for Hekima Veritas, covering account use, acceptable use, and access to the system."
     >
       <section>
         <h2 className="mb-2 text-[14px] font-semibold text-text-primary">

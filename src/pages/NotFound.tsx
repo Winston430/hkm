@@ -10,7 +10,7 @@ export function NotFound() {
   const { status, profile } = useAuth();
 
   useEffect(() => {
-    document.title = "Page Not Found | Stationery Manager";
+    document.title = "Page Not Found | Hekima Veritas";
   }, []);
 
   const homeHref =
