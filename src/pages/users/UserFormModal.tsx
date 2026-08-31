@@ -1,4 +1,4 @@
-// pages/users/UserFormModal.tsx
+// pages/users/UserFormModal.tsx — full file, permission picker added
 import { useEffect, useState, type FormEvent } from "react";
 import { FirebaseError } from "firebase/app";
 import { Eye, EyeSlash, WarningCircle } from "@phosphor-icons/react";
@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
 import { toast } from "../../lib/toast";
+import { PERMISSION_GROUPS, type Permission } from "../../types/permissions";
 import type { UserRole } from "../../types/user";
 
 function createUserErrorMessage(error: unknown): string {
@@ -49,6 +50,7 @@ export function UserFormModal({
     email: string;
     password: string;
     role: UserRole;
+    permissions: Permission[];
   }) => Promise<void>;
 }) {
   const [name, setName] = useState("");
@@ -56,6 +58,7 @@ export function UserFormModal({
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<UserRole>("agent");
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,9 +69,16 @@ export function UserFormModal({
       setPassword("");
       setShowPassword(false);
       setRole("agent");
+      setPermissions([]);
       setError(null);
     }
   }, [open]);
+
+  function togglePermission(permission: Permission) {
+    setPermissions((prev) =>
+      prev.includes(permission) ? prev.filter((p) => p !== permission) : [...prev, permission],
+    );
+  }
 
   async function handleCopyPassword() {
     try {
@@ -88,7 +98,13 @@ export function UserFormModal({
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit({ name: name.trim(), email: email.trim(), password, role });
+      await onSubmit({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+        role,
+        permissions: role === "admin" ? [] : permissions, // admins bypass via role — no need to store grants
+      });
       onClose();
     } catch (err) {
       setError(createUserErrorMessage(err));
@@ -102,7 +118,7 @@ export function UserFormModal({
       open={open}
       onClose={onClose}
       title="Add User"
-      width="sm"
+      width="md"
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose} disabled={submitting}>
@@ -125,7 +141,7 @@ export function UserFormModal({
         </>
       }
     >
-      <form id="user-form" onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <form id="user-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Input
           id="user-name"
           label="Name"
@@ -161,7 +177,7 @@ export function UserFormModal({
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
-              className="absolute bottom-2.5 right-2.5 flex h-6 w-6 items-center justify-center rounded-sm text-text-muted transition-colors duration-150 hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
+              className="absolute bottom-2.5 right-2.5 flex h-6 w-6 items-center justify-center rounded-full text-text-muted transition-colors duration-150 hover:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
             >
               {showPassword ? <EyeSlash size={15} /> : <Eye size={15} />}
             </button>
@@ -199,6 +215,45 @@ export function UserFormModal({
           <option value="agent">Agent</option>
           <option value="admin">Admin</option>
         </Select>
+
+        {role === "admin" ? (
+          <p className="rounded-md bg-surface-secondary px-3 py-2 text-[12px] text-text-secondary">
+            Admins have full access to every area — individual permissions
+            don't apply.
+          </p>
+        ) : (
+          <div>
+            <p className="mb-2 text-[13px] font-medium text-text-primary">
+              Permissions
+            </p>
+            <div className="flex flex-col gap-3 rounded-md border border-border-light p-3">
+              {PERMISSION_GROUPS.map((group) => (
+                <div key={group.resource}>
+                  <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-text-muted">
+                    {group.label}
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {group.permissions.map((perm) => (
+                      <label
+                        key={perm.key}
+                        className="flex items-center gap-2 text-[13px] text-text-primary"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={permissions.includes(perm.key)}
+                          disabled={submitting}
+                          onChange={() => togglePermission(perm.key)}
+                          className="h-4 w-4 rounded border-border accent-orange focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35"
+                        />
+                        {perm.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && (
           <p

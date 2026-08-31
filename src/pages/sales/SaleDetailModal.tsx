@@ -24,10 +24,12 @@ export function SaleDetailModal({
   sale,
   onClose,
   onRefund,
+  canRefund,
 }: {
   sale: Sale | null;
   onClose: () => void;
   onRefund: (sale: Sale) => Promise<void>;
+  canRefund: boolean;
 }) {
   const [confirmingRefund, setConfirmingRefund] = useState(false);
   const [refunding, setRefunding] = useState(false);
@@ -68,7 +70,7 @@ export function SaleDetailModal({
             >
               Close
             </Button>
-            {sale.status === "completed" && (
+            {sale.status === "completed" && canRefund && (
               <Button
                 variant="danger"
                 size="sm"

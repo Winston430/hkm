@@ -1,6 +1,12 @@
 // pages/sales/Sales.tsx
 import { useEffect, useMemo, useState } from "react";
-import { DownloadSimple, Receipt } from "@phosphor-icons/react";
+import {
+  ArrowCounterClockwise,
+  ChartLineUp,
+  Coins,
+  DownloadSimple,
+  Receipt,
+} from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
@@ -12,6 +18,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { ErrorState } from "../../components/ui/ErrorState";
 import { Pagination } from "../../components/ui/Pagination";
 import { SkeletonRow } from "../../components/ui/Skeleton";
+import { MetricCard } from "../../components/ui/MetricCard";
 import { Table, TableHead, Th, Td, Tr } from "../../components/ui/Table";
 import { useAuth } from "../../hooks/useAuth";
 import { listAllSales, refundSale } from "../../services/sales";
@@ -23,7 +30,7 @@ import { SaleDetailModal } from "./SaleDetailModal";
 
 type Status = "loading" | "success" | "error";
 const PAGE_SIZE = 10;
-const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
+const FLASH_DURATION_MS = 900;
 
 const statusVariant: Record<SaleStatus, "success" | "warning" | "danger"> = {
   completed: "success",
@@ -47,7 +54,9 @@ function isSameDay(ms: number, dateStr: string) {
 }
 
 export function Sales() {
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
+  const canRefund = hasPermission("sales.refund");
+
   const [status, setStatus] = useState<Status>("loading");
   const [sales, setSales] = useState<Sale[]>([]);
   const [search, setSearch] = useState("");
@@ -92,6 +101,28 @@ export function Sales() {
     });
   }, [sales, search, date, paymentFilter]);
 
+  const stats = useMemo(() => {
+    let completedRevenue = 0;
+    let completedCount = 0;
+    let refundedAmount = 0;
+
+    for (const sale of filtered) {
+      if (sale.status === "completed") {
+        completedRevenue += sale.totalAmount;
+        completedCount++;
+      } else if (sale.status === "refunded") {
+        refundedAmount += sale.totalAmount;
+      }
+    }
+
+    return {
+      totalSales: filtered.length,
+      totalRevenue: completedRevenue,
+      refundedAmount,
+      avgSaleValue: completedCount === 0 ? 0 : completedRevenue / completedCount,
+    };
+  }, [filtered]);
+
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -100,10 +131,7 @@ export function Sales() {
   }, [search, date, paymentFilter]);
 
   async function handleRefund(sale: Sale) {
-    if (!profile) return;
-    // No try/catch here by design — SaleDetailModal owns error display and
-    // only closes itself on success, same pattern as ProductFormModal and
-    // AdjustStockModal.
+    if (!profile || !canRefund) return;
     await refundSale(sale, profile.id, profile.name);
     setSales((prev) =>
       prev.map((s) => (s.id === sale.id ? { ...s, status: "refunded" } : s)),
@@ -113,7 +141,7 @@ export function Sales() {
   }
 
   function handleExport() {
-    const dateSlug = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const dateSlug = new Date().toISOString().slice(0, 10);
     exportToCsv(
       `sales-${dateSlug}`,
       filtered.map((sale) => ({
@@ -145,6 +173,43 @@ export function Sales() {
           </Button>
         }
       />
+
+      {status === "loading" && (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-lg border border-border bg-surface p-4">
+              <div className="skeleton mb-3 h-3 w-20" />
+              <div className="skeleton h-7 w-16" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === "success" && (
+        <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <MetricCard
+            label="Total Sales"
+            value={String(stats.totalSales)}
+            icon={<Receipt size={16} />}
+          />
+          <MetricCard
+            label="Total Revenue"
+            value={formatCurrency(stats.totalRevenue)}
+            icon={<Coins size={16} />}
+          />
+          <MetricCard
+            label="Refunded"
+            value={formatCurrency(stats.refundedAmount)}
+            tone={stats.refundedAmount > 0 ? "attention" : "default"}
+            icon={<ArrowCounterClockwise size={16} />}
+          />
+          <MetricCard
+            label="Avg Sale Value"
+            value={formatCurrency(stats.avgSaleValue)}
+            icon={<ChartLineUp size={16} />}
+          />
+        </div>
+      )}
 
       <Card padded={false} className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -266,6 +331,7 @@ export function Sales() {
         sale={selected}
         onClose={() => setSelected(null)}
         onRefund={handleRefund}
+        canRefund={canRefund}
       />
     </div>
   );

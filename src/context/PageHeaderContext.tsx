@@ -38,8 +38,8 @@ export function PageHeaderProvider({
 
   useEffect(() => {
     document.title = header?.title
-      ? `${header.title} | Stationery Manager`
-      : "Stationery Manager";
+      ? `${header.title} | Hekima Veritas`
+      : "Hekima Veritas";
   }, [header]);
 
   return (

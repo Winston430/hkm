@@ -7,7 +7,7 @@ import { useDashboardData } from "../../hooks/useDashboardData";
 import { useAuth } from "../../hooks/useAuth";
 import { formatCurrency } from "../../lib/format";
 import { getTimeGreeting, getFirstName } from "../../lib/greeting";
-import { MetricCard } from "./MetricCard";
+import { MetricCard } from "../../components/ui/MetricCard";
 import { SalesTrendChart } from "./SalesTrendChart";
 import { RecentSalesCard } from "./RecentSalesCard";
 import { LowStockCard } from "./LowStockCard";

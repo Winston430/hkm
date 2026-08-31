@@ -16,7 +16,7 @@ export function TermsOfService() {
           By signing in to this system, you agree to use it only for
           authorized business purposes on behalf of{" "}
           <strong className="font-medium text-text-primary">
-            HEKIMA STATIONERY & GENERAL SUPPLIES LIMITED
+            HEKIMA VERITAS & GENERAL SUPPLY COMPANY LIMITED
           </strong>{" "}
           ("the Business"), which operates it.
         </p>
@@ -122,7 +122,7 @@ export function TermsOfService() {
         <p>
           Questions about these terms can be directed to{" "}
           <strong className="font-medium text-text-primary">
-            HEKIMA STATIONERY & GENERAL SUPPLIES LIMITED
+            HEKIMA VERITAS & GENERAL SUPPLY COMPANY LIMITED
           </strong>{" "}
           at{" "}
           <a

@@ -43,6 +43,11 @@
   --radius-sm: 4px;
   --radius-md: 5px;
   --radius-lg: 6px;
+
+  /* App-wide size — 1 = 100%. Raise/lower to retune overall density.
+     Scales all fonts, icons, padding, and gaps together since it's
+     applied via `zoom` on <html>, not a font-size override. */
+  --app-zoom: 1.1;
 }
 
 @layer base {
@@ -53,6 +58,7 @@
   html {
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+    zoom: var(--app-zoom);
   }
 
   body {
@@ -238,7 +244,6 @@
   }
 }
 
-/* index.css — add alongside the other @keyframes blocks */
 @keyframes bars-wave {
   0%,
   100% {

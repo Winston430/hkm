@@ -1,3 +1,5 @@
+import type { Permission } from "./permissions";
+
 export type UserRole = "admin" | "agent";
 
 export type UserStatus = "active" | "inactive";
@@ -8,6 +10,7 @@ export interface AppUser {
   email: string;
   role: UserRole;
   status: UserStatus;
+  permissions: Permission[];
   lastActivityAt: number | null;
   createdAt: number;
   updatedAt: number;

@@ -1,5 +1,6 @@
+// pages/inventory/Inventory.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Stack } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -24,7 +25,7 @@ type PageStatus = "loading" | "success" | "error";
 
 const PRODUCTS_PAGE_SIZE = 10;
 const MOVEMENTS_PAGE_SIZE = 10;
-const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
+const FLASH_DURATION_MS = 900;
 
 const statusFilters: { value: "all" | StockStatus; label: string }[] = [
   { value: "all", label: "All Statuses" },
@@ -43,7 +44,11 @@ const movementReasonLabel: Record<StockMovementReason, string> = {
 
 export function Inventory() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const location = useLocation();
+  const basePath = location.pathname.startsWith("/agent") ? "/agent" : "/admin";
+  const { profile, hasPermission } = useAuth();
+  const canAdjust = hasPermission("inventory.adjust");
+
   const [status, setStatus] = useState<PageStatus>("loading");
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
@@ -116,11 +121,7 @@ export function Inventory() {
     change: number;
     reason: StockMovementReason;
   }) {
-    if (!adjusting || !profile) return;
-    // No try/catch here by design — AdjustStockModal owns error display and
-    // only closes itself on success, matching ProductFormModal's pattern
-    // for onCreate/onUpdate. Catching here would swallow the rejection
-    // before the modal ever sees it.
+    if (!adjusting || !profile || !canAdjust) return;
     const movement = await adjustStock({
       productId: adjusting.id,
       productName: adjusting.name,
@@ -138,7 +139,7 @@ export function Inventory() {
     );
     setMovements((prev) => [movement, ...prev]);
     setFlashId(adjusting.id);
-    setMovementsPage(1); // surface the new entry immediately
+    setMovementsPage(1);
     toast.success("Stock updated successfully.");
   }
 
@@ -196,7 +197,7 @@ export function Inventory() {
               }
               action={
                 products.length === 0 ? (
-                  <Button size="sm" onClick={() => navigate("/admin/products")}>
+                  <Button size="sm" onClick={() => navigate(`${basePath}/products`)}>
                     Go to Products
                   </Button>
                 ) : undefined
@@ -214,7 +215,7 @@ export function Inventory() {
                     <Th>Stock</Th>
                     <Th>Minimum</Th>
                     <Th>Status</Th>
-                    <Th>Actions</Th>
+                    {canAdjust && <Th>Actions</Th>}
                   </TableHead>
                   <tbody>
                     {pagedProducts.map((product) => {
@@ -247,15 +248,17 @@ export function Inventory() {
                                   : "In Stock"}
                             </Badge>
                           </Td>
-                          <Td>
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              onClick={() => setAdjusting(product)}
-                            >
-                              Adjust Stock
-                            </Button>
-                          </Td>
+                          {canAdjust && (
+                            <Td>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setAdjusting(product)}
+                              >
+                                Adjust Stock
+                              </Button>
+                            </Td>
+                          )}
                         </Tr>
                       );
                     })}
@@ -346,12 +349,14 @@ export function Inventory() {
         </Card>
       </div>
 
-      <AdjustStockModal
-        open={adjusting !== null}
-        onClose={() => setAdjusting(null)}
-        product={adjusting}
-        onSubmit={handleAdjust}
-      />
+      {canAdjust && (
+        <AdjustStockModal
+          open={adjusting !== null}
+          onClose={() => setAdjusting(null)}
+          product={adjusting}
+          onSubmit={handleAdjust}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,6 @@
+// pages/reports/SalesReportCard.tsx
 import { useMemo } from "react";
 import { Card, CardHeader } from "../../components/ui/Card";
-import { EmptyState } from "../../components/ui/EmptyState";
-import { Receipt } from "@phosphor-icons/react";
-import { BarChart } from "../../components/charts/BarChart";
 import { formatCurrency } from "../../lib/format";
 import type { PaymentMethod, Sale } from "../../types/sale";
 
@@ -13,74 +11,73 @@ const paymentLabel: Record<PaymentMethod, string> = {
 };
 
 export function SalesReportCard({ sales }: { sales: Sale[] }) {
-  const completed = useMemo(
-    () => sales.filter((s) => s.status === "completed"),
-    [sales],
-  );
+  const stats = useMemo(() => {
+    const completed = sales.filter((s) => s.status === "completed");
+    const revenue = completed.reduce((sum, s) => sum + s.totalAmount, 0);
+    const transactions = completed.length;
+    const averageSale = transactions === 0 ? 0 : revenue / transactions;
 
-  const totalRevenue = completed.reduce((sum, s) => sum + s.totalAmount, 0);
-  const transactionCount = completed.length;
-  const averageSale = transactionCount > 0 ? totalRevenue / transactionCount : 0;
-
-  const byPayment = useMemo(() => {
-    const map = new Map<PaymentMethod, { count: number; amount: number }>();
+    const countsByMethod = new Map<PaymentMethod, number>();
     for (const sale of completed) {
-      const entry = map.get(sale.paymentMethod) ?? { count: 0, amount: 0 };
-      entry.count += 1;
-      entry.amount += sale.totalAmount;
-      map.set(sale.paymentMethod, entry);
+      countsByMethod.set(sale.paymentMethod, (countsByMethod.get(sale.paymentMethod) ?? 0) + 1);
     }
-    return Array.from(map.entries());
-  }, [completed]);
+    const paymentBreakdown = (Object.keys(paymentLabel) as PaymentMethod[])
+      .map((method) => {
+        const count = countsByMethod.get(method) ?? 0;
+        return { method, count, percent: transactions === 0 ? 0 : (count / transactions) * 100 };
+      })
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    return { revenue, transactions, averageSale, paymentBreakdown };
+  }, [sales]);
 
   return (
     <Card>
       <CardHeader title="Sales Report" />
-      {completed.length === 0 ? (
-        <EmptyState
-          icon={<Receipt size={22} />}
-          title="No sales in this period"
-          description="Completed sales for the selected range will be summarized here."
-        />
-      ) : (
-        <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-[11px] uppercase text-text-muted">Revenue</p>
-              <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
-                {formatCurrency(totalRevenue)}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase text-text-muted">
-                Transactions
-              </p>
-              <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
-                {transactionCount}
-              </p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase text-text-muted">
-                Average Sale
-              </p>
-              <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
-                {formatCurrency(averageSale)}
-              </p>
-            </div>
-          </div>
 
-          <div>
-            <p className="mb-3 text-[12px] font-medium text-text-secondary">
-              By Payment Method
-            </p>
-            <BarChart
-              data={byPayment.map(([method, data]) => ({
-                label: paymentLabel[method],
-                value: data.amount,
-              }))}
-              formatValue={formatCurrency}
-            />
-          </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div>
+          <p className="text-[11px] uppercase text-text-muted">Revenue</p>
+          <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
+            {formatCurrency(stats.revenue)}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] uppercase text-text-muted">Transactions</p>
+          <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
+            {stats.transactions}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] uppercase text-text-muted">Average Sale</p>
+          <p className="mt-1 text-[20px] font-semibold tabular-nums text-text-primary">
+            {formatCurrency(stats.averageSale)}
+          </p>
+        </div>
+      </div>
+
+      {stats.paymentBreakdown.length > 0 && (
+        <div className="mt-5 border-t border-border-light pt-4">
+          <p className="mb-2.5 text-[11px] uppercase text-text-muted">
+            By Payment Method
+          </p>
+          <ul className="flex flex-col gap-2">
+            {stats.paymentBreakdown.map((row) => (
+              <li
+                key={row.method}
+                className="flex items-center justify-between text-[13px]"
+              >
+                <span className="text-text-secondary">{paymentLabel[row.method]}</span>
+                <span className="tabular-nums text-text-primary">
+                  <span className="font-medium">{row.count}</span>
+                  <span className="ml-1 text-text-muted">
+                    transaction{row.count === 1 ? "" : "s"} · {row.percent.toFixed(0)}%
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </Card>

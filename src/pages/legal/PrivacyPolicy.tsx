@@ -16,7 +16,7 @@ export function PrivacyPolicy() {
           This Privacy Policy applies to the Stationery Manager admin
           application (the "System"), an internal tool used by{" "}
           <strong className="font-medium text-text-primary">
-            HEKIMA STATIONERY & GENERAL SUPPLIES LIMITED
+            HEKIMA VERITAS & GENERAL SUPPLY COMPANY LIMITED
           </strong>{" "}
           ("the Business") to manage products, inventory, sales, and staff
           accounts. It describes what information the System stores, how it
@@ -169,7 +169,7 @@ export function PrivacyPolicy() {
           Questions about this policy or requests regarding your personal
           data can be directed to{" "}
           <strong className="font-medium text-text-primary">
-            HEKIMA STATIONERY & GENERAL SUPPLIES LIMITED
+            HEKIMA VERITAS & GENERAL SUPPLY COMPANY LIMITED
           </strong>{" "}
           at{" "}
           <a

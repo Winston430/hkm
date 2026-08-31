@@ -7,6 +7,7 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { useAuth } from "../hooks/useAuth";
 import { sendPasswordReset } from "../services/auth";
+import { getRoleHomePath } from "../store/AuthContext";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -28,7 +29,7 @@ function forgotPasswordErrorMessage(error: unknown): string {
 }
 
 export function ForgotPassword() {
-  const { status } = useAuth();
+  const { status, profile, isResolvingProfile } = useAuth();
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,9 +43,16 @@ export function ForgotPassword() {
     };
   }, []);
 
-  if (status === "authenticated") {
-    return <Navigate to="/admin/dashboard" replace />;
+if (status === "authenticated") {
+  if (isResolvingProfile) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <span className="spinner spinner-lg" role="status" aria-label="Loading" />
+      </div>
+    );
   }
+  return <Navigate to={getRoleHomePath(profile)} replace />;
+}
 
   function startCooldown() {
     setCooldown(RESEND_COOLDOWN_SECONDS);

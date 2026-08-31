@@ -44,12 +44,17 @@ export function ProtectedRoute({
   children: ReactNode;
   roles: UserRole[];
 }) {
-  const { status, profile, error } = useAuth();
+  const { status, profile, error, isResolvingProfile } = useAuth();
 
-  if (status === "loading") {
+  // Must come before the `!profile` check below — status flips to
+  // "authenticated" as soon as sign-in is confirmed, but the profile
+  // (and therefore the role) can still be loading or retrying for a
+  // few hundred ms after that. Checking !profile first was the bug:
+  // it read "not loaded yet" as "failed to load."
+  if (status === "loading" || isResolvingProfile) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-black" />
+        <span className="spinner spinner-lg" role="status" aria-label="Loading" />
       </div>
     );
   }

@@ -19,12 +19,12 @@ const variantClasses: Record<Variant, string> = {
   ghost:
     "bg-transparent text-text-primary border border-transparent hover:bg-surface-secondary",
   danger:
-    "bg-danger text-white border border-danger hover:bg-danger disabled:bg-text-disabled disabled:border-text-disabled",
+    "bg-danger text-white border border-danger hover:bg-black-soft hover:border-black-soft disabled:bg-text-disabled disabled:border-text-disabled",
 };
 
 const sizeClasses: Record<Size, string> = {
-  sm: "h-8 px-3 text-xs gap-1.5",
-  md: "h-9 px-4 text-[13px] gap-2",
+  sm: "h-8 px-3.5 text-xs gap-1.5",
+  md: "h-9 px-5 text-[13px] gap-2",
 };
 
 export function Button({
@@ -39,10 +39,14 @@ export function Button({
   return (
     <button
       disabled={disabled}
-      className={`inline-flex items-center justify-center rounded-md font-medium transition-colors duration-75 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`group inline-flex items-center justify-center rounded-full font-medium transition-colors duration-75 disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...rest}
     >
-      {icon}
+      {icon && (
+        <span className="flex shrink-0 items-center justify-center transition-transform duration-150 ease-out group-hover:scale-[1.15]">
+          {icon}
+        </span>
+      )}
       {children}
     </button>
   );

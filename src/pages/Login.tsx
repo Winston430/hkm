@@ -6,6 +6,8 @@ import {
   EyeSlash,
   WarningCircle,
 } from "@phosphor-icons/react";
+import { getRoleHomePath } from "../store/AuthContext";
+
 
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
@@ -41,7 +43,7 @@ function loginErrorMessage(error: unknown): string {
 }
 
 export function Login() {
-  const { status, profile } = useAuth();
+  const { status, profile, isResolvingProfile } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,12 +52,14 @@ export function Login() {
   const [error, setError] = useState<string | null>(null);
 
   if (status === "authenticated") {
-    const destination =
-      profile?.role === "agent"
-        ? "/agent"
-        : "/admin/dashboard";
-
-    return <Navigate to={destination} replace />;
+    if (isResolvingProfile) {
+      return (
+        <div className="flex min-h-screen w-full items-center justify-center bg-background">
+          <span className="spinner spinner-lg" role="status" aria-label="Loading" />
+        </div>
+      );
+    }
+    return <Navigate to={getRoleHomePath(profile)} replace />;
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -89,23 +93,27 @@ export function Login() {
       ========================================================== */}
       <aside className="relative hidden w-[42%] max-w-md flex-col justify-between bg-black p-12 lg:flex">
         <div>
-          {/* Brand */}
-          <div className="flex items-center gap-2">
-            <span
-              className="h-2 w-2 rounded-[2px] bg-orange"
-              aria-hidden="true"
-            />
+  {/* Brand */}
+  <div className="flex items-center gap-2">
+    <span
+      className="h-2 w-2 rounded-[2px] bg-orange"
+      aria-hidden="true"
+    />
+    <span className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
+      HEKIMA VERITAS
+    </span>
+  </div>
 
-            <span className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
-              HEKIMA STATIONERY
-            </span>
-          </div>
-
-          {/* Product name */}
-          <p className="mt-3 text-[22px] font-semibold tracking-tight text-white">
-            Stationery Manager
-          </p>
-        </div>
+  {/* Wordmark — replace src once the real asset is sent.
+      brightness(0) invert(1) forces a flat-color raster mark to pure
+      white; delete this filter entirely once you're on an inline SVG
+      using currentColor, or if the source file is already white. */}
+  <img
+    src="/logo-wordmark.png" // ← swap for the real asset path
+    alt="Stationery Manager"
+    className="mt-3 h-12 w-auto max-w-[220px] object-contain brightness-0 invert"
+  />
+</div>
 
         {/* Description */}
         <p className="max-w-[26ch] text-[14px] leading-relaxed text-white/50">

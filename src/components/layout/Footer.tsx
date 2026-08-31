@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="mt-8 border-t border-border-light px-4 py-4 lg:px-6">
       <div className="flex flex-col-reverse items-center justify-between gap-2 text-[11.5px] text-text-muted sm:flex-row">
-        <span>&copy; {year} Stationery Manager. All rights reserved.</span>
+        <span>&copy; {year} Hekima Veritas. All rights reserved.</span>
 
         <a
           href="https://www.zentrya.co.tz"

@@ -1,4 +1,4 @@
-// pages/users/Users.tsx
+// pages/users/Users.tsx — full file, "Edit Permissions" action added
 import { useEffect, useState } from "react";
 import { DotsThreeVertical, Plus, Users as UsersIcon } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -15,15 +15,18 @@ import { useAuth } from "../../hooks/useAuth";
 import {
   createUser,
   listUsers,
+  updateUserPermissions,
   updateUserRole,
   updateUserStatus,
 } from "../../services/users";
 import type { AppUser, UserRole } from "../../types/user";
+import type { Permission } from "../../types/permissions";
 import { toast } from "../../lib/toast";
 import { UserFormModal } from "./UserFormModal";
+import { PermissionsModal } from "./PermissionsModal";
 
 type Status = "loading" | "success" | "error";
-const FLASH_DURATION_MS = 900; // matches .row-flash animation length in index.css
+const FLASH_DURATION_MS = 900;
 
 function formatLastActivity(ms: number | null) {
   if (!ms) return "Never";
@@ -41,6 +44,7 @@ export function Users() {
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [confirmingPromote, setConfirmingPromote] = useState<AppUser | null>(null);
+  const [editingPermissions, setEditingPermissions] = useState<AppUser | null>(null);
 
   async function load() {
     setStatus("loading");
@@ -68,11 +72,10 @@ export function Users() {
     email: string;
     password: string;
     role: UserRole;
+    permissions: Permission[];
   }) {
     const created = await createUser(input);
-    setUsers((prev) =>
-      [...prev, created].sort((a, b) => a.name.localeCompare(b.name)),
-    );
+    setUsers((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
     setFlashId(created.id);
     toast.success("User created successfully.");
   }
@@ -81,9 +84,7 @@ export function Users() {
     setPendingUserId(user.id);
     try {
       const { updatedAt } = await updateUserRole(user.id, role);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, role, updatedAt } : u)),
-      );
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, role, updatedAt } : u)));
       setFlashId(user.id);
       toast.success(`${user.name} is now ${role === "admin" ? "an admin" : "an agent"}.`);
     } catch {
@@ -93,8 +94,6 @@ export function Users() {
     }
   }
 
-  // Demoting to agent is low-stakes and fires immediately; promoting to
-  // admin grants elevated access, so that path is gated behind a confirm.
   function requestRoleChange(user: AppUser) {
     const nextRole: UserRole = user.role === "admin" ? "agent" : "admin";
     if (nextRole === "admin") {
@@ -109,9 +108,7 @@ export function Users() {
     try {
       const nextStatus = active ? "active" : "inactive";
       const { updatedAt } = await updateUserStatus(user.id, nextStatus);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus, updatedAt } : u)),
-      );
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus, updatedAt } : u)));
       setFlashId(user.id);
       toast.success(`${user.name} ${active ? "activated" : "deactivated"}.`);
     } catch {
@@ -119,6 +116,13 @@ export function Users() {
     } finally {
       setPendingUserId(null);
     }
+  }
+
+  async function handlePermissionsSave(userId: string, permissions: Permission[]) {
+    const { updatedAt } = await updateUserPermissions(userId, permissions);
+    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, permissions, updatedAt } : u)));
+    setFlashId(userId);
+    toast.success("Permissions updated successfully.");
   }
 
   return (
@@ -173,10 +177,7 @@ export function Users() {
                   const isSelf = user.id === profile?.id;
                   const isPending = pendingUserId === user.id;
                   return (
-                    <Tr
-                      key={user.id}
-                      className={user.id === flashId ? "row-flash" : undefined}
-                    >
+                    <Tr key={user.id} className={user.id === flashId ? "row-flash" : undefined}>
                       <Td className="font-medium">{user.name}</Td>
                       <Td className="text-text-secondary">{user.email}</Td>
                       <Td>
@@ -185,25 +186,17 @@ export function Users() {
                         </Badge>
                       </Td>
                       <Td>
-                        <Badge variant="neutral">
-                          {user.status === "active" ? "Active" : "Inactive"}
-                        </Badge>
+                        <Badge variant="neutral">{user.status === "active" ? "Active" : "Inactive"}</Badge>
                       </Td>
-                      <Td className="text-text-secondary">
-                        {formatLastActivity(user.lastActivityAt)}
-                      </Td>
+                      <Td className="text-text-secondary">{formatLastActivity(user.lastActivityAt)}</Td>
                       <Td>
                         <Dropdown
                           trigger={
                             <button
                               type="button"
-                              aria-label={
-                                isSelf
-                                  ? "Your account — actions restricted"
-                                  : `Actions for ${user.name}`
-                              }
+                              aria-label={isSelf ? "Your account — actions restricted" : `Actions for ${user.name}`}
                               aria-haspopup="menu"
-                              className={`flex h-7 w-7 items-center justify-center rounded-md text-text-secondary transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35 ${
+                              className={`flex h-7 w-7 items-center justify-center rounded-full text-text-secondary transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange/35 ${
                                 isSelf ? "opacity-40" : "hover:bg-surface-secondary"
                               }`}
                             >
@@ -217,27 +210,19 @@ export function Users() {
                             </div>
                           ) : (
                             <>
-                              <DropdownItem
-                                disabled={isPending}
-                                onClick={() => requestRoleChange(user)}
-                              >
-                                {isPending
-                                  ? "Updating…"
-                                  : user.role === "admin"
-                                    ? "Make Agent"
-                                    : "Make Admin"}
+                              <DropdownItem disabled={isPending} onClick={() => requestRoleChange(user)}>
+                                {isPending ? "Updating…" : user.role === "admin" ? "Make Agent" : "Make Admin"}
                               </DropdownItem>
+                              {user.role === "agent" && (
+                                <DropdownItem onClick={() => setEditingPermissions(user)}>
+                                  Edit Permissions
+                                </DropdownItem>
+                              )}
                               <DropdownItem
                                 disabled={isPending}
-                                onClick={() =>
-                                  handleStatusChange(user, user.status !== "active")
-                                }
+                                onClick={() => handleStatusChange(user, user.status !== "active")}
                               >
-                                {isPending
-                                  ? "Updating…"
-                                  : user.status === "active"
-                                    ? "Deactivate"
-                                    : "Activate"}
+                                {isPending ? "Updating…" : user.status === "active" ? "Deactivate" : "Activate"}
                               </DropdownItem>
                             </>
                           )}
@@ -253,6 +238,12 @@ export function Users() {
       </Card>
 
       <UserFormModal open={formOpen} onClose={() => setFormOpen(false)} onSubmit={handleCreate} />
+
+      <PermissionsModal
+        user={editingPermissions}
+        onClose={() => setEditingPermissions(null)}
+        onSubmit={handlePermissionsSave}
+      />
 
       <ConfirmDialog
         open={confirmingPromote !== null}
