@@ -1,0 +1,12 @@
+// lib/greeting.ts
+export function getTimeGreeting(date: Date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+export function getFirstName(fullName?: string | null): string | undefined {
+  if (!fullName) return undefined;
+  return fullName.trim().split(/\s+/)[0];
+}

@@ -1,0 +1,318 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+
+  /* Primary */
+  --color-black: #111111;
+  --color-black-soft: #1c1c1c;
+
+  /* Accent */
+  --color-orange: #f26a21;
+  --color-orange-dark: #d95516;
+  --color-orange-light: #fff1e8;
+
+  /* Background */
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f2f2ef;
+
+  /* Text */
+  --color-text-primary: #111111;
+  --color-text-secondary: #5f5f5b;
+  --color-text-muted: #858580;
+  --color-text-disabled: #a5a5a0;
+
+  /* Borders */
+  --color-border: #ddddd8;
+  --color-border-light: #ebebe7;
+
+  /* Semantic */
+  --color-success: #247a45;
+  --color-success-light: #eaf5ee;
+
+  --color-warning: #a86400;
+  --color-warning-light: #fff3dc;
+
+  --color-danger: #b42318;
+  --color-danger-light: #fdecea;
+
+  --color-info: #245b8a;
+  --color-info-light: #eaf2f8;
+
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+
+  /* App-wide size — 1 = 100%. Raise/lower to retune overall density.
+     Scales all fonts, icons, padding, and gaps together since it's
+     applied via `zoom` on <html>, not a font-size override. */
+  --app-zoom: 1.1;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    zoom: var(--app-zoom);
+  }
+
+  body {
+    background: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  /* Tabular figures for money/quantity columns */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Respect reduced-motion preference across every animation below */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  /* ── Spinner ───────────────────────────────────────────────
+     A true ring with a 270° arc, built with conic-gradient + mask
+     instead of the border-top-color trick. Flat color, linear
+     rotation — reads as a mechanism, not a decoration.          */
+  .spinner {
+    --spinner-size: 18px;
+    --spinner-thickness: 2px;
+    width: var(--spinner-size);
+    height: var(--spinner-size);
+    border-radius: 50%;
+    background: conic-gradient(
+      var(--color-orange) 0deg 270deg,
+      transparent 270deg 360deg
+    );
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--spinner-thickness)),
+      #000 calc(100% - var(--spinner-thickness))
+    );
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--spinner-thickness)),
+      #000 calc(100% - var(--spinner-thickness))
+    );
+    animation: spin 0.65s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .spinner-sm {
+    --spinner-size: 13px;
+    --spinner-thickness: 1.5px;
+  }
+
+  .spinner-lg {
+    --spinner-size: 28px;
+    --spinner-thickness: 2.5px;
+  }
+
+  /* Muted variant for spinners on dark/orange surfaces */
+  .spinner-on-dark {
+    background: conic-gradient(
+      #ffffff 0deg 270deg,
+      transparent 270deg 360deg
+    );
+  }
+
+  /* ── Dot pulse ─────────────────────────────────────────────
+     For inline text ("Saving…") and small buttons where a ring
+     is too heavy.                                              */
+  .spinner-dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .spinner-dots span {
+    width: 3.5px;
+    height: 3.5px;
+    border-radius: 50%;
+    background: currentColor;
+    animation: dot-pulse 1.1s ease-in-out infinite;
+  }
+
+  .spinner-dots span:nth-child(2) {
+    animation-delay: 0.12s;
+  }
+
+  .spinner-dots span:nth-child(3) {
+    animation-delay: 0.24s;
+  }
+
+  /* ── Skeleton loader ───────────────────────────────────────
+     For table rows / cards where content shouldn't jump once
+     data arrives. Use instead of a spinner wherever the final
+     layout shape is already known.                             */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-surface-secondary);
+    border-radius: var(--radius-sm);
+    color: transparent;
+  }
+
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.6),
+      transparent
+    );
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  }
+
+  /* ── Loading bar ───────────────────────────────────────────
+     Section/page-level fetch indicator — sits under a header
+     or table toolbar, doesn't take over the layout.            */
+  .loading-bar {
+    position: relative;
+    height: 2px;
+    width: 100%;
+    background: var(--color-border-light);
+    overflow: hidden;
+  }
+
+  .loading-bar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: -30%;
+    width: 30%;
+    background: var(--color-orange);
+    animation: loading-bar-sweep 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* ── Content transitions ───────────────────────────────────
+     Fast and functional — not the slide-up-and-fade every AI
+     dashboard applies to every card on load.                   */
+  .fade-in {
+    animation: fade-in 0.15s ease-out;
+  }
+
+  /* Momentary tint on a row whose value just changed
+     (stock movement, balance update, status change).           */
+  .row-flash {
+    animation: row-flash 0.9s ease-out;
+  }
+}
+
+@layer components {
+  .sidebar-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+  .sidebar-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 999px;
+  }
+}
+
+@keyframes bars-wave {
+  0%,
+  100% {
+    transform: scaleY(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scaleY(0.6);
+    opacity: 1;
+  }
+}
+
+@keyframes toast-countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dot-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-bar-sweep {
+  0% {
+    left: -30%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes row-flash {
+  0% {
+    background-color: var(--color-orange-light);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
