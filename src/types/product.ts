@@ -5,10 +5,26 @@ export interface Category {
   updatedAt: number;
 }
 
+export type ProductUnit =
+  | "pcs" | "doz" | "ctn" | "pack" | "ream" | "box" | "set" | "jar" | "bottle" | "roll";
+
+export const productUnitLabel: Record<ProductUnit, string> = {
+  pcs: "Pcs",
+  doz: "Doz",
+  ctn: "Ctn",
+  pack: "Pack",
+  ream: "Ream",
+  box: "Box",
+  set: "Set",
+  jar: "Jar",
+  bottle: "Bottle",
+  roll: "Roll",
+};
+
 export interface Product {
   id: string;
   name: string;
-  sku: string;
+  unit: ProductUnit;
   categoryId: string;
   costPrice: number;
   sellingPrice: number;

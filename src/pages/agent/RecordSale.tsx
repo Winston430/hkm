@@ -1,3 +1,4 @@
+// pages/agent/RecordSale.tsx
 import { useEffect, useMemo, useState, type InputHTMLAttributes } from "react";
 import { MagnifyingGlass, Plus, ShoppingCart, Trash } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -14,7 +15,7 @@ import { listActiveProducts } from "../../services/products";
 import { createSale } from "../../services/sales";
 import { formatCurrency } from "../../lib/format";
 import { toast } from "../../lib/toast";
-import { getStockStatus, type Product } from "../../types/product";
+import { getStockStatus, productUnitLabel, type Product } from "../../types/product";
 import type { PaymentMethod } from "../../types/sale";
 import { MySalesHistory } from "./MySalesHistory";
 
@@ -82,11 +83,7 @@ export function RecordSale() {
     const term = search.trim().toLowerCase();
     if (!term) return [];
     return products
-      .filter(
-        (p) =>
-          p.name.toLowerCase().includes(term) ||
-          p.sku.toLowerCase().includes(term),
-      )
+      .filter((p) => p.name.toLowerCase().includes(term))
       .slice(0, 8);
   }, [products, search]);
 
@@ -192,7 +189,7 @@ export function RecordSale() {
           <Card>
             <CardHeader title="Search Products" />
             <SearchInput
-              placeholder="Search by name or SKU"
+              placeholder="Search by name"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -216,7 +213,7 @@ export function RecordSale() {
                 <EmptyState
                   icon={<MagnifyingGlass size={22} />}
                   title="Search for a product"
-                  description="Type a product name or SKU to start adding items to this sale."
+                  description="Type a product name to start adding items to this sale."
                 />
               </div>
             )}
@@ -243,7 +240,8 @@ export function RecordSale() {
                           {product.name}
                         </p>
                         <p className="text-[11px] text-text-muted">
-                          {product.sku} · {formatCurrency(product.sellingPrice)}
+                          {productUnitLabel[product.unit] ?? "—"} ·{" "}
+                          {formatCurrency(product.sellingPrice)}
                           {inCartQty > 0 && (
                             <span className="text-orange-dark"> · In cart: {inCartQty}</span>
                           )}

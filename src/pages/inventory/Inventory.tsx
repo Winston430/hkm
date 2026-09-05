@@ -16,7 +16,7 @@ import { Table, TableHead, Th, Td, Tr } from "../../components/ui/Table";
 import { useAuth } from "../../hooks/useAuth";
 import { adjustStock, listStockMovements } from "../../services/inventory";
 import { listAllProducts } from "../../services/products";
-import { getStockStatus, type Product, type StockStatus } from "../../types/product";
+import { getStockStatus, productUnitLabel, type Product, type StockStatus } from "../../types/product";
 import type { StockMovement, StockMovementReason } from "../../types/sale";
 import { toast } from "../../lib/toast";
 import { AdjustStockModal } from "./AdjustStockModal";
@@ -88,12 +88,8 @@ export function Inventory() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      const matchesTerm =
-        !term ||
-        p.name.toLowerCase().includes(term) ||
-        p.sku.toLowerCase().includes(term);
-      const matchesStatus =
-        statusFilter === "all" || getStockStatus(p) === statusFilter;
+      const matchesTerm = !term || p.name.toLowerCase().includes(term);
+      const matchesStatus = statusFilter === "all" || getStockStatus(p) === statusFilter;
       return matchesTerm && matchesStatus;
     });
   }, [products, search, statusFilter]);
@@ -155,7 +151,7 @@ export function Inventory() {
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <div className="w-full max-w-xs">
               <SearchInput
-                placeholder="Search by name or SKU"
+                placeholder="Search by name"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -211,7 +207,7 @@ export function Inventory() {
                 <Table>
                   <TableHead>
                     <Th>Product</Th>
-                    <Th>SKU</Th>
+                    <Th>Unit</Th>
                     <Th>Stock</Th>
                     <Th>Minimum</Th>
                     <Th>Status</Th>
@@ -226,7 +222,9 @@ export function Inventory() {
                           className={product.id === flashId ? "row-flash" : undefined}
                         >
                           <Td className="font-medium">{product.name}</Td>
-                          <Td className="text-text-secondary">{product.sku}</Td>
+                          <Td className="text-text-secondary">
+                            {productUnitLabel[product.unit] ?? "—"}
+                          </Td>
                           <Td className="tabular-nums">{product.stock}</Td>
                           <Td className="tabular-nums text-text-secondary">
                             {product.minimumStock}

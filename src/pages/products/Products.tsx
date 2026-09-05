@@ -36,7 +36,7 @@ import {
 } from "../../services/products";
 import { formatCurrency } from "../../lib/format";
 import { exportToCsv } from "../../lib/exportCsv";
-import { getStockStatus, type Category, type Product } from "../../types/product";
+import { getStockStatus, productUnitLabel, type Category, type Product } from "../../types/product";
 import { toast } from "../../lib/toast";
 import { ProductFormModal } from "./ProductFormModal";
 
@@ -110,7 +110,7 @@ export function Products() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return products.filter((p) => {
-      const matchesTerm = !term || p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term);
+      const matchesTerm = !term || p.name.toLowerCase().includes(term);
       const matchesCategory = categoryFilter === "all" || p.categoryId === categoryFilter;
       return matchesTerm && matchesCategory;
     });
@@ -190,7 +190,7 @@ export function Products() {
       "products",
       filtered.map((product) => ({
         Name: product.name,
-        SKU: product.sku,
+        Unit: productUnitLabel[product.unit] ?? "",
         Category: categoryName(product.categoryId),
         "Cost Price": product.costPrice,
         "Selling Price": product.sellingPrice,
@@ -258,7 +258,7 @@ export function Products() {
       <Card padded={false} className="p-5">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="w-full max-w-xs">
-            <SearchInput placeholder="Search by name or SKU" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <SearchInput placeholder="Search by name" value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="w-full max-w-[200px]">
             <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
@@ -307,7 +307,7 @@ export function Products() {
               <Table>
                 <TableHead>
                   <Th>Product</Th>
-                  <Th>SKU</Th>
+                  <Th>Unit</Th>
                   <Th>Category</Th>
                   <Th>Selling Price</Th>
                   <Th>Stock</Th>
@@ -321,7 +321,7 @@ export function Products() {
                     return (
                       <Tr key={product.id} className={product.id === flashId ? "row-flash" : undefined}>
                         <Td className="font-medium">{product.name}</Td>
-                        <Td className="text-text-secondary">{product.sku}</Td>
+                        <Td className="text-text-secondary">{productUnitLabel[product.unit] ?? "—"}</Td>
                         <Td className="text-text-secondary">{categoryName(product.categoryId)}</Td>
                         <Td className="tabular-nums">{formatCurrency(product.sellingPrice)}</Td>
                         <Td>

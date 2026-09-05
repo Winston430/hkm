@@ -4,13 +4,13 @@ import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
-import { isSkuTaken, type ProductInput } from "../../services/products";
+import type { ProductInput } from "../../services/products";
 import { formatCurrency } from "../../lib/format";
-import type { Category, Product } from "../../types/product";
+import { productUnitLabel, type Category, type Product, type ProductUnit } from "../../types/product";
 
 interface FormState {
   name: string;
-  sku: string;
+  unit: ProductUnit;
   categoryId: string;
   costPrice: string;
   sellingPrice: string;
@@ -23,7 +23,7 @@ interface FormState {
 function emptyForm(defaultCategoryId: string): FormState {
   return {
     name: "",
-    sku: "",
+    unit: "pcs",
     categoryId: defaultCategoryId,
     costPrice: "",
     sellingPrice: "",
@@ -37,7 +37,7 @@ function emptyForm(defaultCategoryId: string): FormState {
 function toForm(product: Product): FormState {
   return {
     name: product.name,
-    sku: product.sku,
+    unit: product.unit ?? "pcs", // legacy products may not have this set yet
     categoryId: product.categoryId,
     costPrice: String(product.costPrice),
     sellingPrice: String(product.sellingPrice),
@@ -48,9 +48,6 @@ function toForm(product: Product): FormState {
   };
 }
 
-/** Blank -> 0 (fields are optional-with-a-default). Anything non-numeric
- *  or negative -> null, so the caller can reject it instead of silently
- *  saving a wrong number. */
 function parseNonNegativeNumber(raw: string): number | null {
   const trimmed = raw.trim();
   if (trimmed === "") return 0;
@@ -89,7 +86,6 @@ export function ProductFormModal({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Live margin preview — informational only, doesn't block submission.
   const costPreview = Number(form.costPrice);
   const pricePreview = Number(form.sellingPrice);
   const canShowMargin =
@@ -106,10 +102,8 @@ export function ProductFormModal({
     setError(null);
 
     const trimmedName = form.name.trim();
-    const trimmedSku = form.sku.trim();
-
-    if (!trimmedName || !trimmedSku || !form.categoryId) {
-      setError("Name, SKU, and category are required.");
+    if (!trimmedName || !form.categoryId) {
+      setError("Name and category are required.");
       return;
     }
 
@@ -143,15 +137,9 @@ export function ProductFormModal({
 
     setSubmitting(true);
     try {
-      const taken = await isSkuTaken(trimmedSku, product?.id);
-      if (taken) {
-        setError("A product with this SKU already exists.");
-        return;
-      }
-
       const payload = {
         name: trimmedName,
-        sku: trimmedSku,
+        unit: form.unit,
         categoryId: form.categoryId,
         costPrice,
         sellingPrice,
@@ -181,12 +169,7 @@ export function ProductFormModal({
       width="lg"
       footer={
         <>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onClose}
-            disabled={submitting}
-          >
+          <Button variant="secondary" size="sm" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
           <Button size="sm" type="submit" form="product-form" disabled={submitting}>
@@ -214,12 +197,18 @@ export function ProductFormModal({
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
           />
-          <Input
-            id="product-sku"
-            label="SKU"
-            value={form.sku}
-            onChange={(e) => set("sku", e.target.value)}
-          />
+          <Select
+            id="product-unit"
+            label="Unit"
+            value={form.unit}
+            onChange={(e) => set("unit", e.target.value as ProductUnit)}
+          >
+            {(Object.keys(productUnitLabel) as ProductUnit[]).map((unit) => (
+              <option key={unit} value={unit}>
+                {productUnitLabel[unit]}
+              </option>
+            ))}
+          </Select>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
