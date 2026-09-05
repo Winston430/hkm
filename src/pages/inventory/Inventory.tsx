@@ -1,6 +1,6 @@
 // pages/inventory/Inventory.tsx
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Stack } from "@phosphor-icons/react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card, CardHeader } from "../../components/ui/Card";
@@ -20,6 +20,7 @@ import { getStockStatus, productUnitLabel, type Product, type StockStatus } from
 import type { StockMovement, StockMovementReason } from "../../types/sale";
 import { toast } from "../../lib/toast";
 import { AdjustStockModal } from "./AdjustStockModal";
+
 
 type PageStatus = "loading" | "success" | "error";
 
@@ -52,7 +53,8 @@ export function Inventory() {
   const [status, setStatus] = useState<PageStatus>("loading");
   const [products, setProducts] = useState<Product[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
-  const [search, setSearch] = useState("");
+  const [searchParams] = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [statusFilter, setStatusFilter] = useState<"all" | StockStatus>("all");
   const [adjusting, setAdjusting] = useState<Product | null>(null);
   const [flashId, setFlashId] = useState<string | null>(null);
